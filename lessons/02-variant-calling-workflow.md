@@ -19,7 +19,7 @@ server using `wget` on the command line.
 
 Make sure you are in the dc_workshop drectory first
 
-    cd ~/dc_workshop
+    cd /n/regal/datac/$USER/
     wget http://devbioinfoguy.github.io/wrangling-genomics-HPC/data/variant_calling.tar.gz
 
 The file 'variant_calling.tar.gz' is what is commonly called a "tarball", which is
@@ -62,8 +62,17 @@ So let's get started.
 The first command is to change to our working directory
 so the script can find all the files it expects
 
-     cd ~/dc_workshop/variant_calling
+     cd ./variant_calling
 
+Before we start using software, we have to load the environments for each software
+package. On clusters, this is typically done using a module system. For what we need, 
+you can execute the following commands
+
+     source new-modules.sh
+     module load bwa
+     module load samtools
+     module load XXX
+     
 We need to index the refernce genome for bwa and samtools. bwa
 and samtools are programs that are pre-installed on our server.
 
@@ -130,7 +139,7 @@ Do the SNP calling with bcftools
 
 Filter the SNPs for the final output
 
-    bcftools view results/bcf/SRR097977_variants.bcf | /usr/share/samtools/vcfutils.pl \
+    bcftools view results/bcf/SRR097977_variants.bcf | vcfutils.pl \
       varFilter - > results/vcf/SRR097977_final_variants.vcf
 
 That's a lot of work, yes? But you have five more FASTQ files to go...
@@ -151,13 +160,15 @@ lessons. So...
 
 Exercises:
 - Using your command history, create a script file that will repeat these commands
-for you. Delete your results directories, and run your script. Do you get all the 
+for you. Name your script *run_variant_call_on_file.sh*. Delete your results 
+directories, and run your script. Do you get all the proper output files?
 
 One additional command we can put in the top of the script to allow you to see what
 is going on is the `set -x` bash command. This debugging tool will print out every
 step before it is executed.
 
 - Insert the debugging command in your script and re-run it. How is the output different?
+If you're comfortable with how this looks and runs, then comment out this line.
 
 - In order run this workflow on another file, you'll need to make changes. Copy this file,
 giving the file a similar name, and make appropriate changes to run on another input
@@ -179,58 +190,49 @@ The first is major change is allowing a change in the filename. Thus at the star
 the script let's capture an input parameter that must be supplied with the script name.
 This input parameter will be the name of the file we want to work on:
 
-filename="$1"
+     fq="$1"
 
+And we'll add a shortcut to store the location to the genome reference FASTA file:
 
-We need to make changes in the following places:
-
-Assign the name/location of our reference genome
-to a variable ($genome)
-
+     # location to genome reference FASTA file
      genome=data/ref_genome/ecoli_rel606.fasta
 
-We need to index the refernce genome for bwa and samtools. bwa
-and samtools are programs that are pre-installed on our server.
+Now, walking thru the code, we can make some substitutions. To index with bwa and samtools
+we can run those commands on the genome variable ($genome) so these value aren't 
+static & hardcoded:
 
      bwa index $genome
      samtools faidx $genome
 
-Create output paths for various intermediate and result files
-The -p option means mkdir will create the whole path if it
-does not exist and refrain from complaining if it does exist
+We'll keep the output paths creation, as it looks fine. (Though really, we could
+put results/ in a variable and declare that at the top, so we can change where the
+results will be as well. We'll leave that for an optional exercise)
 
+     # make all of our output directories
      mkdir -p results/sai
      mkdir -p results/sam
      mkdir -p results/bam
      mkdir -p results/bcf
      mkdir -p results/vcf
 
-We will now use a loop to run the variant calling work flow of
-each of our fastq files, so the list of command below will be execute
-once for each fastq files.
-
-We would start the loop like this, so the name of each fastq file will
-by assigned to $fq
-
-    for fq in data/trimmed_fastq/*.fastq
-    do
-    # etc...
-
 In the script, it is a good idea to use echo for debugging/reporting to the screen
 
-    echo "working with file $fq"
+    echo "Processing file $fq ..."
 
-This command will extract the base name of the file
-(without the path and .fastq extension) and assign it
+We also need to use one special trick, to extract the base name of the file
+(without the path and .fastq extension). We'll assign it
 to the $base variable
-   
-    base=$(basename $fq .fastq)
-    echo "base name is $base"
 
-We will assign various file names to variables both
-for convenience but also to make it easier to see what 
+    # grab base of filename for future naming
+    base=$(basename $fq .fastq)
+    echo "basename is $base"
+
+Since we've already created our output directories, we can now specify all of our
+output files in their proper locations. We will assign various file names to
+ variables both for convenience but also to make it easier to see what 
 is going on in the sommand below.
 
+    # set up output filenames and locations
     fq=data/trimmed_fastq/$base\.fastq
     sai=results/sai/$base\_aligned.sai
     sam=results/sam/$base\_aligned.sam
@@ -240,48 +242,94 @@ is going on in the sommand below.
     variants=results/bcf/$base\_variants.bcf
     final_variants=results/vcf/$base\_final_variants.vcf
 
-Our data are now staged.  The series of command below will run
-the steps of the analytical workflow
+Our data are now staged.  We now need to change the series of command below
+to use our variables so that it will run with more flexibility the steps of the 
+analytical workflow>
 
-Align the reads to the reference genome
-
+    # Align the reads to the reference genome
     bwa aln $genome $fq > $sai
 
-Convert the output to the SAM format
-
+    # Convert the output to the SAM format
     bwa samse $genome $sai $fq > $sam
 
-Convert the SAM file to BAM format
-
+    # Convert the SAM file to BAM format
     samtools view -S -b $sam > $bam
 
-Sort the BAM file
-
+    # Sort the BAM file
     samtools sort -f $bam $sorted_bam
 
-Index the BAM file for display purposes
-
+    # Index the BAM file for display purposes
     samtools index $sorted_bam
 
-Do the first pass on variant calling by counting
-read coverage
-
+    # Do the first pass on variant calling by counting read coverage
     samtools mpileup -g -f $genome $sorted_bam > $raw_bcf
 
-Do the SNP calling with bcftools
-
+    # Do the SNP calling with bcftools
     bcftools view -bvcg $raw_bcf > $variants
 
-Filter the SNPs for the final output
-
+    # And finally, filter the SNPs for the final output
     bcftools view $variants | /usr/share/samtools/vcfutils.pl varFilter - > $final_variants
+
+And finally, we need to add our SLURM directives in the *top* of the file so that 
+the scheduler knows what resources we need to use in order to run our job on the
+compute nodes. And we have to say what software we want to load. 
+So the top of the file should look like:
+
+    #!/bin/bash
+    #
+    #SBATCH -p serial_requeue   # Partition to submit to (comma separated)
+    #SBATCH -n 1                # Number of cores
+    #SBATCH -N 1                # Ensure that all cores are on one machine
+    #SBATCH -t 0-1:00           # Runtime in D-HH:MM (or use minutes)
+    #SBATCH --mem 100           # Memory in MB
+    #SBATCH -J frog_fastqc      # Job name
+    #SBATCH -o fastqc.out       # File to which standard out will be written
+    #SBATCH -e fastqc.err       # File to which standard err will be written
+    #SBATCH --mail-type=ALL     # Type of email notification: BEGIN,END,FAIL,ALL
+    #SBATCH --mail-user=rmf@123.com # Email to which notifications will be sent 
+
+    # set up our software environment...
+    source new-modules.sh
+    module load bwa
+    module load samtools
+    module load bcftools
+
+    # now do work...
+
+Test running on one file... blah
+
+XXX fill in details here.
+     
+Now we need to actually run this to compute the values for all our FASTQ files. And
+now is where we'll use the for loop with the power of the cluster. What we'd like to do
+is run this script on a compute node for every FASTQ -- pleasantly parallelizing our
+workflow.
+
+    for fq in data/trimmed_fastq/*.fastq
+    do
+      sbatch run_variant_call_on_file.sh $fq
+      sleep 1
+    done
+
+What you should see on the output of your screen would be the jobIDs that are returned
+from the scheduler for each of the jobs that you submitted.
+
+You can see their progress by using the squeue command (though there is a lag of
+about 60 seconds between what is happening and what is reported).
+
+Don't forget about the scancel command, should something go wrong and you need to
+cancel your jobs.
+
+
+Exercises:
+- Change the script so that one can include an additional variable to point to
+ a results directory.
     
-    
+<!--
 ****
 **Exercise**
 Run the script run_variant_calling.sh
 ****
-
-
+-->
 
 
