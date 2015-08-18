@@ -7,77 +7,18 @@ Learning Objectives:
 -------------------
 #### What's the goal for this lesson?
 
-* Understand how the FastQ format encodes quality
 * Be able to evaluate a FastQC report
 * Use Trimmommatic to clean FastQ reads
 * Use a For loop to automate operations on multiple files
 
 
-## Details on the FASTQ format
-
-Although it looks complicated  (and maybe it is), its easy to understand the [fastq](https://en.wikipedia.org/wiki/FASTQ_format) format with a little decoding. Some rules about the format include...
-
-|Line|Description|
-|----|-----------|
-|1|Always begins with '@' and then information about the read|
-|2|The actual DNA sequence|
-|3|Always begins with a '+' and sometimes the same info in line 1|
-|4|Has a string of characters which represent the quality scores; must have same number of characters as line 2|
-
-so for example in our data set, one complete read is:
-```
-$ head -n4 SRR098281.fastq 
-@SRR098281.1 HWUSI-EAS1599_1:2:1:0:318 length=35
-CNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
-+SRR098281.1 HWUSI-EAS1599_1:2:1:0:318 length=35
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-```
-This is a pretty bad read. 
-
-Notice that line 4 is:
-```
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-```
-As mentioned above, line 4 is a encoding of the quality. In this case, the code is the [ASCII](https://en.wikipedia.org/wiki/ASCII#ASCII_printable_code_chart) character table. According to the chart a '#' has the value 35 and '!' has the value 33. If only it were that simple. There are actually several historical differences in how Illumina and other players have encoded the scores. Heres the chart from wikipedia:
-
-```
-  SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS.....................................................
-  ..........................XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX......................
-  ...............................IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII......................
-  .................................JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ......................
-  LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL....................................................
-  !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~
-  |                         |    |        |                              |                     |
- 33                        59   64       73                            104                   126
-  0........................26...31.......40                                
-                           -5....0........9.............................40 
-                                 0........9.............................40 
-                                    3.....9.............................40 
-  0.2......................26...31........41                              
-
- S - Sanger        Phred+33,  raw reads typically (0, 40)
- X - Solexa        Solexa+64, raw reads typically (-5, 40)
- I - Illumina 1.3+ Phred+64,  raw reads typically (0, 40)
- J - Illumina 1.5+ Phred+64,  raw reads typically (3, 40)
-     with 0=unused, 1=unused, 2=Read Segment Quality Control Indicator (bold) 
-     (Note: See discussion above).
- L - Illumina 1.8+ Phred+33,  raw reads typically (0, 41)
- ```
- So using the Illumina 1.8 encouding, which is what you will mostly see from now on, our first c is called with a Phred score of 0 and our Ns are called with a score of 2. Read quality is assessed using the Phred Quality Score.  This score is logarithmically based and the score values can be interpreted as follows:
-
-|Phred Quality Score |Probability of incorrect base call |Base call accuracy|
-|:-------------------|:---------------------------------:|-----------------:|
-|10	|1 in 10 |	90%|
-|20	|1 in 100|	99%|
-|30	|1 in 1000|	99.9%|
-|40	|1 in 10,000|	99.99%|
-|50	|1 in 100,000|	99.999%|
-|60	|1 in 1,000,000|	99.9999%|
-
 ## FastQC
+We have already talked about [what information is stored in a fastq file earlier](https://github.com/adamfreedman/knowyourdata-genomics/blob/gh-pages/lessons/01-know_your_data.md#unmapped-read-data-fastq). The next step is to assess that information to see if the data contained within are of good quality.
+
 FastQC (http://www.bioinformatics.babraham.ac.uk/projects/fastqc/) provides a simple way to do some quality control checks on raw sequence data coming from high throughput sequencing pipelines. It provides a modular set of analyses which you can use to give a quick impression of whether your data has any problems of which you should be aware before doing any further analysis.
 
-The main functions of FastQC are
+The main functions of FastQC are:
+
 * Import of data from BAM, SAM or FastQ files (any variant)
 * Providing a quick overview to tell you in which areas there may be problems
 * Summary graphs and tables to quickly assess your data
@@ -88,21 +29,20 @@ The main functions of FastQC are
 ## Running FASTQC
 ###A. Stage your data
 
-Create a working directory for your analysis
+Change directories to your home directory, and if you don't already have it create a working directory for your analysis:
     
-    cd
-    mkdir dc_workshop
+    cd             
+    mkdir dc_workshop 		#ONLY do this if you don't have this directory.
 
-Give it three three subdirectories
+Make three new subdirectories: 
 
     mkdir dc_workshop/data
     mkdir dc_workshop/docs
     mkdir dc_workshop/results
 
-The sample data we will be working with is in a hidden directory, we will
-move it to our working directory
+The trimmed data we will be working with is in a the directory we copied over yesterday. For the purposes of this section, we will move some of them (the raw fastq files) to our `data` directory in `dc_workshop`:
 
-    mv ~/.dc_sampledata_lite/untrimmed_fastq/ ~/dc_workshop/data/
+    mv -R ~/dc_sample_data/untrimmed_fastq/  ~/dc_workshop/data/
 
 ###B. Run FastQC  
 
@@ -110,15 +50,16 @@ Before we run FastQC, let's start an interactive session on the cluster
 
 	srun -p interact --pty --mem 500 -t 0-06:00 /bin/bash
 
-*An interactive session is a very useful to test tools, workflows, run jobs that open new interactive windows (X11-forwarding) and so on.*
+***An interactive session is a very useful to test tools, workflows, run jobs that open new interactive windows (X11-forwarding) and so on.***
 
-Once your interactive job starts, notice that the command prompt no longer says rclogin; this is because we are not working on the login node any more.
+Once your interactive job starts, notice that the command prompt no longer says rclogin; this is because we are working on a compute node now, not on a login node.
 
     cd ~/dc_workshop/data/untrimmed_fastq/  
 
 To run the FastQC program, we first need to load the appropriate module.
 
-	module load centos6/fastqc-0.10.1
+	source new-modules.sh
+	module load fastqc
 
 Once a module for a tool is loaded, you have essentially made it directly available to you like any other basic UNIX command.
 
@@ -134,7 +75,7 @@ Exit the interactive session and start a new one with 3 cores, and use the multi
 	
 	srun -p interact -n 3 --pty --mem 500 -t 0-06:00 /bin/bash      #start a new one with 3 cpus (-n 3)
 	
-	module load centos6/fastqc-0.10.1      #you'll have to reload the module for the new session
+	module load fastqc      #you'll have to reload the module for the new session
 	
 	fastqc -t 3 *.fastq       #note the extra parameter we specified for 3 threads
 
@@ -150,17 +91,33 @@ Now, let's create a home for our results
 
 ###C. Results
    
-	~/dc_workshop/results/fastqc_untrimmed_reads/
-	ls 
+Let's take a closer look at the files generated by FastQC:
    
-The zip files need to be unpacked with the 'unzip' program.  If we try to do them all
-at once.
+	ls -lh ~/dc_workshop/results/fastqc_untrimmed_reads/
 
+#### HTML reports
+The .html files contain the final reports generated by fastqc, let's take a closer look at them. Transfer one of them over to your laptop via [FileZilla](https://github.com/devbioinfoguy/HPC-genomics/blob/master/lessons/5.Data-rountripping.md#using-the-filezilla-gui-all-platforms).
+
+***FastQC is just an indicator of what's going on with your data, don't take the "PASS"es and "FAIL"s too seriously.***
+
+FastQC has a really well documented [manual page](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/) with [more details](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/Help/) about all the plots in the report.
+
+We recommend looking at [this post](http://bioinfo-core.org/index.php/9th_Discussion-28_October_2010) for more information on what bad plots look like and what they mean for your data.
+
+#### .zip files   
+
+Let's go back to the terminal now. The other output of FastQC is a .zip file. These .zip files need to be unpacked with the `unzip` program. If we try to `unzip` them all at once:
+
+    cd ~/dc_workshop/results/fastqc_untrimmed_reads/
+    
     unzip *.zip
 
-Did it work? No, because `unzip` expects to get only one zip file.  Welcome to the real world.
-We *could* do each file, one by one, but what if we have 500 files?  There is a smarter way.
-We can save time by using a simple shell 'for loop' to iterate through the list of files in *.zip.
+Did it work? 
+
+No, because `unzip` expects to get only one zip file. Welcome to the real world.
+We *could* do each file, one by one, but what if we have 500 files? There is a smarter way.
+We can save time by using a simple shell `for loop` to iterate through the list of files in *.zip.
+
 After you type the first line, you will get a special '>' prompt to type next next lines.  
 You start with 'do', then enter your commands, then end with 'done' to execute the loop.
 
@@ -169,12 +126,10 @@ You start with 'do', then enter your commands, then end with 'done' to execute t
     > unzip $zip
     > done
 
-Note that, in the first line, we create a variable named `zip`.  After that, we call that variable with the syntax `$zip`. `$zip` is assigned the value of each item (file) in the list *.zip, once for each
-iteration of the loop.
+Note that in the first line, we create a variable named `zip`.  After that, we call that variable with the syntax `$zip`. `$zip` is assigned the value of each item (file) in the list *.zip, once for each iteration of the loop.
 
-This loop is basically a simple program.  When it runs, it will run unzip 
-once for each file (whose name is stored in the $zip variable). The contents of each file will 
-be unpacked into a separate directory by the unzip program.
+This loop is basically a simple program. When it runs, it will run unzip 
+once for each file (whose name is stored in the $zip variable). The contents of each file will be unpacked into a separate directory by the unzip program.
 
 The for loop is intepreted as a multipart command.  If you press the up arrow
 on your keyboard to recall the command, it will be shown like so:
@@ -185,7 +140,12 @@ When you check your history later, it will help your remember what you did!
 
 #### Document your work
 
-To save a record, let's cat all fastqc summary.txts into one full_report.txt and move this to ~/dc_workshop/docs. 
+What information is contained in the unzipped folder?
+
+	ls -lh *fastqc
+	head *fastqc/summary.txt
+
+To save a record, let's `cat` all `fastqc summary.txt` files into one `full_report.txt` and move this to `~/dc_workshop/docs`. 
 You can use wildcards in paths as well as file names.  Do you remember how we said `cat` is
 really meant for concatenating text files?
     
@@ -238,13 +198,14 @@ The command line incantation for trimmomatic is more complicated.  This is where
 
 Let's load the trimmomatic module:
 
-	module load centos6/Trimmomatic-0.30
+	module load legacy
+	module load centos6/Trimmomatic-0.32
 
 The general form of the command on this cluster is:
 
-    java -jar $TRIMMOMATIC/trimmomatic-0.30.jar SE -phred64 inputfile outputfile OPTION:VALUE... # DO NOT RUN THIS
+    java -jar $TRIMMOMATIC/trimmomatic-0.32.jar SE -threads 1 inputfile outputfile OPTION:VALUE... # DO NOT RUN THIS
 
-`java -jar` calls the Java program, which is needed to run trimmotic, which lived in a 'jar' file (trimmomatic-0.30.jar), a special kind of java archive that is often used for programs written in the Java programing language.  If you see a new program that ends in '.jar', you will know it is a java program that is executed `java -jar program name`.  The 'SE' argument is a keyword that specifies we are working with single-end reads.
+`java -jar` calls the Java program, which is needed to run trimmotic, which lived in a 'jar' file (`trimmomatic-0.32.jar`), a special kind of java archive that is often used for programs written in the Java programing language.  If you see a new program that ends in '.jar', you will know it is a java program that is executed `java -jar` program name.  The `SE` argument is a keyword that specifies we are working with single-end reads. We have to specify the `-threads` parameter because Trimmomatic uses 16 threads by default.
 
 NOTE: The `$TRIMMOMATIC` variable denoting the path to the .jar file is created on this cluster for ease of use, and is specific to this set up.
 
@@ -253,21 +214,25 @@ The next two arguments are input file and output file names. These are then foll
 
 So, for the single fastq input file 'SRR098283.fastq', the command would be:
 
-    java -jar $TRIMMOMATIC/trimmomatic-0.30.jar SE -phred33 SRR098283.fastq \
+    $ java -jar $TRIMMOMATIC/trimmomatic-0.32.jar SE -threads 6 SRR098283.fastq \
     SRR098283.fastq_trim.fastq SLIDINGWINDOW:4:20 MINLEN:20
-
-	TrimmomaticSE: Started with arguments: -phred33 SRR098283.fastq SRR098283.fastq_trim.fastq SLIDINGWINDOW:4:20 MINLEN:20
+	
+	TrimmomaticSE: Started with arguments: SRR098283.fastq SRR098283.fastq_trim.fastq 	SLIDINGWINDOW:4:20 MINLEN:20
+	Automatically using 6 threads
+	Quality encoding detected as phred33
 	Input Reads: 250000 Surviving: 193900 (77.56%) Dropped: 56100 (22.44%)
 	TrimmomaticSE: Completed successfully
 
-We now have a new fastq file.
+We now have a new fastq file with our trimmed and cleaned up data:
 
-    ls SRR098283*
+    $ ls SRR098283*
+    
     SRR098283.fastq  SRR098283.fastq_trim.fastq
 
 Let's make a new directory and place this trimmed files there:
 	
 	mkdir ../trimmed_fastq
+	
 	mv SRR098283.fastq_trim.fastq ../trimmed_fastq
     
 
@@ -284,7 +249,7 @@ We already know how to use a for loop to deal with this situation.
     for infile in *.fastq
     >do
     >outfile=$infile\_trim.fastq
-    >java -jar $TRIMMOMATIC/trimmomatic-0.30.jar SE -phred33 $infile $outfile SLIDINGWINDOW:4:20 MINLEN:20
+    >java -jar $TRIMMOMATIC/trimmomatic-0.32.jar SE -threads 6 -phred33 $infile $outfile SLIDINGWINDOW:4:20 MINLEN:20
     >done
 
 Do you remember how the first specifies a variable that is assigned the value of each item in the list in turn?  We can call it whatever we like.  This time it is called infile.  Note that the third line of this for loop is creating a second variable called outfile.  We assign it the value of $infile with '_trim.fastq' appended to it.  The '\' escape character is used so the shell knows that whatever follows \ is not part of the variable name $infile.  There are no spaces before or after the '='.
@@ -294,7 +259,7 @@ Make sure that after you have run the trimming on all the samples, you transfer 
 #### Shell script
 Try putting this "for loop" in a shell script and running it. Running the command via a script means that you will have a more permanent record of how you ran your analysis (include the modules you load in the script too!), rather than relying on the temporary nature of stored history.
 
-### (2) FastQC on trimmed files
+### (2) FastQC on trimmed fastq files
 
 Write a shell script that: 
 
