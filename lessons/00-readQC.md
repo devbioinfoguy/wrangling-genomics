@@ -158,7 +158,7 @@ at once.
 
     unzip *.zip
 
-Did it work? No, because 'unzip' expects to get only one zip file.  Welcome to the real world.
+Did it work? No, because `unzip` expects to get only one zip file.  Welcome to the real world.
 We *could* do each file, one by one, but what if we have 500 files?  There is a smarter way.
 We can save time by using a simple shell 'for loop' to iterate through the list of files in *.zip.
 After you type the first line, you will get a special '>' prompt to type next next lines.  
@@ -169,8 +169,7 @@ You start with 'do', then enter your commands, then end with 'done' to execute t
     > unzip $zip
     > done
 
-Note that, in the first line, we create a variable named 'zip'.  After that, we call that variable
-with the syntax $zip.  $zip is assigned the value of each item (file) in the list *.zip, once for each
+Note that, in the first line, we create a variable named `zip`.  After that, we call that variable with the syntax `$zip`. `$zip` is assigned the value of each item (file) in the list *.zip, once for each
 iteration of the loop.
 
 This loop is basically a simple program.  When it runs, it will run unzip 
@@ -187,7 +186,7 @@ When you check your history later, it will help your remember what you did!
 #### Document your work
 
 To save a record, let's cat all fastqc summary.txts into one full_report.txt and move this to ~/dc_workshop/docs. 
-You can use wildcards in paths as well as file names.  Do you remember how we said 'cat' is
+You can use wildcards in paths as well as file names.  Do you remember how we said `cat` is
 really meant for concatenating text files?
     
     cat */summary.txt > ~/dc_workshop/docs/fastqc_summaries.txt
@@ -202,7 +201,7 @@ Once we have an idea of the quality of our raw data, it is time to trim away ada
 
 Because *Trimmomatic* is java based, it is run using the command:
 
-**_java jar trimmomatic-0.30.jar_**
+`java jar trimmomatic-0.30.jar`
 
 What follows this are the specific commands that tells the program exactly how you want it to operate. *Trimmomatic* has a variety of options and parameters:
 
@@ -220,16 +219,16 @@ What follows this are the specific commands that tells the program exactly how y
 
 A generic command for *Trimmomatic* looks like this:
 
-**_java jar trimmomatic-0.30.jar SE -thr _**
+`java jar trimmomatic-0.30.jar SE -thr `
 
 A complete command for *Trimmomatic* will look something like this:
 
-**_java jar trimmomatic-0.30.jar SE -threads 4 -phred64 SRR_0156.fastq SRR_1056_trimmed.fastq ILLUMINACLIP:SRR_adapters.fa SLIDINGWINDOW:4:20 _**
+`java jar trimmomatic-0.30.jar SE -threads 4 -phred64 SRR_0156.fastq SRR_1056_trimmed.fastq ILLUMINACLIP:SRR_adapters.fa SLIDINGWINDOW:4:20`
 
 This command tells *Trimmomatic* to run on a Single End file (``SRR_0156.fastq``, in this case), the output file will be called ``SRR_0156_trimmed.fastq``,  there is a file with Illumina adapters called ``SRR_adapters.fa``, and we are using a sliding window of size 4 that will remove those bases if their phred score is below 20.
 
 
-## Exercise - Running Trimmomatic
+###Running Trimmomatic
 
 Go to the untrimmed fastq data location:
 
@@ -245,9 +244,9 @@ The general form of the command on this cluster is:
 
     java -jar $TRIMMOMATIC/trimmomatic-0.30.jar SE -phred64 inputfile outputfile OPTION:VALUE... # DO NOT RUN THIS
 
-'java -jar' calls the Java program, which is needed to run trimmotic, which lived in a 'jar' file (trimmomatic-0.30.jar), a special kind of java archive that is often used for programs written in the Java programing language.  If you see a new program that ends in '.jar', you will know it is a java program that is executed 'java -jar program name'.  The 'SE' argument is a keyword that specifies we are working with single-end reads.
+`java -jar` calls the Java program, which is needed to run trimmotic, which lived in a 'jar' file (trimmomatic-0.30.jar), a special kind of java archive that is often used for programs written in the Java programing language.  If you see a new program that ends in '.jar', you will know it is a java program that is executed `java -jar program name`.  The 'SE' argument is a keyword that specifies we are working with single-end reads.
 
-NOTE: The "$TRIMMOMATIC" variable denoting the path to the .jar file is created on this cluster for ease of use, and is specific to this set up.
+NOTE: The `$TRIMMOMATIC` variable denoting the path to the .jar file is created on this cluster for ease of use, and is specific to this set up.
 
 The next two arguments are input file and output file names. These are then followed by a series of options. The specifics of how options are passed to a program are different depending on the program. You will always have to read the manual of a new program to learn which way it expects its command-line aruments to be composed.
 
@@ -261,11 +260,20 @@ So, for the single fastq input file 'SRR098283.fastq', the command would be:
 	Input Reads: 250000 Surviving: 193900 (77.56%) Dropped: 56100 (22.44%)
 	TrimmomaticSE: Completed successfully
 
-So that worked and we have a new fastq file.
+We now have a new fastq file.
 
     ls SRR098283*
     SRR098283.fastq  SRR098283.fastq_trim.fastq
 
+Let's make a new directory and place this trimmed files there:
+	
+	mkdir ../trimmed_fastq
+	mv SRR098283.fastq_trim.fastq ../trimmed_fastq
+    
+
+## Exercise - Running Trimmomatic on all the files
+
+#### For loop
 Now we know how to run trimmomatic but there is some good news and bad news.  
 One should always ask for the bad news first.  Trimmomatic only operates on 
 one input file at a time and we have more than one input file.  The good news?
@@ -279,6 +287,9 @@ We already know how to use a for loop to deal with this situation.
 
 Do you remember how the first specifies a variable that is assigned the value of each item in the list in turn?  We can call it whatever we like.  This time it is called infile.  Note that the third line of this for loop is creating a second variable called outfile.  We assign it the value of $infile with '_trim.fastq' appended to it.  The '\' escape character is used so the shell knows that whatever follows \ is not part of the variable name $infile.  There are no spaces before or after the '='.
 
+Make sure that after you have run the trimming on all the samples, you transfer the trimmed files to the trimmed_fastq directory. The `*` comes in handy here too.
+
+#### Shell script
 Try putting this "for loop" in a shell script and running it. Running the command via a script means that you will have a more permanent record of how you ran your analysis (include the modules you load in the script too!), rather than relying on the temporary nature of stored history.
 
 

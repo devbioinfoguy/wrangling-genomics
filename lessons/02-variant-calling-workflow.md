@@ -7,17 +7,16 @@ Learning Objectives:
 -------------------
 #### What's the goal for this lesson?
 
-* Use a series of command line tools to perform a variant calling workflow
-* Use a For loop from the previous lesson to help automate repetitive tasks
-* Group a series of sequential commands into a script to automate a workflow
+* Use a series of command line tools to execute a variant calling workflow
+* Automate a workflow by grouping a series of sequential commands into a script
+* Modify and submit the workflow script to the cluster
 
 ## Running a Workflow
 
 To get started with this lesson, ensure you are logged into the cluster and are working
-in an interactive session ona compute node. Next, we will need to grab some data from an outside
-server using `wget` on the command line.
+in an interactive session on a compute node. Next, we will need to grab some data from an outside server using `wget` on the command line.
 
-Make sure you are in the dc_workshop drectory first
+Make sure you are in the dc_workshop directory first:
 
     cd /n/regal/datac/$USER/
     wget http://devbioinfoguy.github.io/wrangling-genomics-HPC/data/variant_calling.tar.gz
@@ -28,41 +27,44 @@ this archive using the command below.
 
     tar xvf variant_calling.tar.gz
 
-This will create a directory tree that contains some input data (reference genome and fastq files)
-and a shell script that details the series of commands used to run the variant calling workflow.
+This will create a directory tree that contains some input data (reference genome and fastq files) and a shell script that details the series of commands used to run the variant calling workflow.
 
 <!--  need to fix the directory structure -->
-<pre>
-variant_calling
-├── ref_genome
-│   └── ecoli_rel606.fasta
-├── run_variant_calling.sh
-└── trimmed_fastq
-    ├── SRR097977.fastq
-    ├── SRR098026.fastq
-    ├── SRR098027.fastq
-    ├── SRR098028.fastq
-    ├── SRR098281.fastq
-    └── SRR098283.fastq
-</pre>
+	variant_calling
+	├── data
+	│   ├── ref_genome
+	│   │   └── ecoli_rel606.fasta
+	│   └── trimmed_fastq
+	│       ├── SRR097977.fastq
+	│       ├── SRR098026.fastq
+	│       ├── SRR098027.fastq
+	│       ├── SRR098028.fastq
+	│       ├── SRR098281.fastq
+	│       └── SRR098283.fastq
+	└── run_variant_calling.sh
 
 Without getting into the details yet, the variant calling workflow will do the following steps
 
 1. Index the reference genome for use by bwa and samtools
-2. Align reads to reference genome
+2. Align reads to reference genome using bwa
 3. Convert the format of the alignment to sorted BAM, with some intermediate steps.
 4. Calculate the read coverage of positions in the genome
 5. Detect the single nucleotide polymorphisms (SNPs)
 6. Filter and report the SNP variants in VCF (variant calling format)
 
-We'll first perform the commands in the workflow. We'll next create a script for the 
-commands and test this. Finally, we'll modify the script to run on the cluster.
+We'll first perform the commands for all the above steps (run through the workflow). 
+
+Next, we'll create a script for the commands and test it. 
+
+Finally, we'll modify the script to run on the cluster.
+
+
 So let's get started.
 
 The first command is to change to our working directory
 so the script can find all the files it expects
 
-     cd ./variant_calling
+     cd variant_calling
 
 Before we start using software, we have to load the environments for each software
 package. On clusters, this is typically done using a module system. For what we need, 
@@ -73,15 +75,12 @@ you can execute the following commands
      module load samtools
      module load XXX
      
-We need to index the refernce genome for bwa and samtools. bwa
-and samtools are programs that are pre-installed on our server.
+We need to index the reference genome for bwa and samtools. 
 
-     bwa index data/ref_genome/ecoli_rel606.fasta
-     samtools data/ref_genome/ecoli_rel606.fasta
+     bwa index data/ref_genome/ecoli_rel606.fasta     #this is key in speedy alignment of reads
+     samtools faidx data/ref_genome/ecoli_rel606.fasta
 
-Create output paths for various intermediate and result files
-The -p option means mkdir will create the whole path if it
-does not exist and refrain from complaining if it does exist
+Create output paths for various intermediate and results files. The `-p` option means mkdir will create the whole path if it does not exist and refrain from complaining if it does exist
 
      mkdir -p results/sai
      mkdir -p results/sam
