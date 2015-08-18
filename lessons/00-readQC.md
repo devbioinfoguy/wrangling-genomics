@@ -13,7 +13,7 @@ Learning Objectives:
 
 
 ## FastQC
-We have already talked about [what information is stored in a fastq file earlier](https://github.com/adamfreedman/knowyourdata-genomics/blob/gh-pages/lessons/01-know_your_data.md#unmapped-read-data-fastq). The next step is to assess that information to see if the data contained within are of good quality.
+We have already talked about [what information is stored in a FASTQ file earlier](https://github.com/adamfreedman/knowyourdata-genomics/blob/gh-pages/lessons/01-know_your_data.md#unmapped-read-data-fastq). The next step is to assess that information to see if the data contained within are of good quality.
 
 FastQC (http://www.bioinformatics.babraham.ac.uk/projects/fastqc/) provides a simple way to do some quality control checks on raw sequence data coming from high throughput sequencing pipelines. It provides a modular set of analyses which you can use to give a quick impression of whether your data has any problems of which you should be aware before doing any further analysis.
 
@@ -69,7 +69,7 @@ FastQC will accept multiple file names as input, so we can use the *.fastq wildc
 
 *Did you notice how each file was processed serially? How do we speed this up?*
 
-Exit the interactive session and start a new one with 3 cores, and use the multi-threading funcionality of FastQC to run 3 jobs at once.
+Exit the interactive session and start a new one with 3 cores, and use the multi-threading funcionality of FastQC to run 6 jobs at once.
 
 	exit      #exit the current interactive session
 	
@@ -77,7 +77,7 @@ Exit the interactive session and start a new one with 3 cores, and use the multi
 	
 	module load fastqc      #you'll have to reload the module for the new session
 	
-	fastqc -t 3 *.fastq       #note the extra parameter we specified for 3 threads
+	fastqc -t 6 *.fastq       #note the extra parameter we specified for 6 threads
 
 
 Now, let's create a home for our results
@@ -238,7 +238,7 @@ Let's make a new directory and place this trimmed files there:
 
 ## Exercise
 
-### (1) Running Trimmomatic on all the files
+### (1) Trimmomatic on all the files
 
 #### For loop
 Now we know how to run trimmomatic but there is some good news and bad news.  
@@ -263,7 +263,7 @@ Try putting this "for loop" in a shell script and running it. Running the comman
 
 Write a shell script that: 
 
-* runs fastqc on all the trimmed files in parallel
+* runs fastqc on all the trimmed files in parallel. (Hint: `-t`.)
 * transfers the fastqc output to a new folder in `~/dc_workshop/results` called `fastqc_trimmed_reads`
 
 
