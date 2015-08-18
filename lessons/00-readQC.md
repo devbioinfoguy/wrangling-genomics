@@ -202,7 +202,7 @@ Once we have an idea of the quality of our raw data, it is time to trim away ada
 
 Because *Trimmomatic* is java based, it is run using the command:
 
-**_java jar trimmomatic-0.32.jar_**
+**_java jar trimmomatic-0.30.jar_**
 
 What follows this are the specific commands that tells the program exactly how you want it to operate. *Trimmomatic* has a variety of options and parameters:
 
@@ -220,11 +220,11 @@ What follows this are the specific commands that tells the program exactly how y
 
 A generic command for *Trimmomatic* looks like this:
 
-**_java jar trimmomatic-0.32.jar SE -thr _**
+**_java jar trimmomatic-0.30.jar SE -thr _**
 
 A complete command for *Trimmomatic* will look something like this:
 
-**_java jar trimmomatic-0.32.jar SE -threads 4 -phred64 SRR_0156.fastq SRR_1056_trimmed.fastq ILLUMINACLIP:SRR_adapters.fa SLIDINGWINDOW:4:20 _**
+**_java jar trimmomatic-0.30.jar SE -threads 4 -phred64 SRR_0156.fastq SRR_1056_trimmed.fastq ILLUMINACLIP:SRR_adapters.fa SLIDINGWINDOW:4:20 _**
 
 This command tells *Trimmomatic* to run on a Single End file (``SRR_0156.fastq``, in this case), the output file will be called ``SRR_0156_trimmed.fastq``,  there is a file with Illumina adapters called ``SRR_adapters.fa``, and we are using a sliding window of size 4 that will remove those bases if their phred score is below 20.
 
@@ -243,7 +243,7 @@ Let's load the trimmomatic module:
 
 The general form of the command on this cluster is:
 
-    java -jar $TRIMMOMATIC/trimmomatic-0.30.jar SE inputfile outputfile OPTION:VALUE... # DO NOT RUN THIS
+    java -jar $TRIMMOMATIC/trimmomatic-0.30.jar SE -phred64 inputfile outputfile OPTION:VALUE... # DO NOT RUN THIS
 
 'java -jar' calls the Java program, which is needed to run trimmotic, which lived in a 'jar' file (trimmomatic-0.30.jar), a special kind of java archive that is often used for programs written in the Java programing language.  If you see a new program that ends in '.jar', you will know it is a java program that is executed 'java -jar program name'.  The 'SE' argument is a keyword that specifies we are working with single-end reads.
 
@@ -254,14 +254,12 @@ The next two arguments are input file and output file names. These are then foll
 
 So, for the single fastq input file 'SRR098283.fastq', the command would be:
 
-    java -jar $TRIMMOMATIC/trimmomatic-0.30.jar SE SRR098283.fastq \
+    java -jar $TRIMMOMATIC/trimmomatic-0.30.jar SE -phred33 SRR098283.fastq \
     SRR098283.fastq_trim.fastq SLIDINGWINDOW:4:20 MINLEN:20
 
-    TrimmomaticSE: Started with arguments: SRR098283.fastq SRR098283.fastq_trim.fastq SLIDINGWINDOW:4:20 MINLEN:20
-    Automatically using 2 threads
-    Quality encoding detected as phred33
-    Input Reads: 21564058 Surviving: 17030985 (78.98%) Dropped: 4533073 (21.02%)
-    TrimmomaticSE: Completed successfully
+	TrimmomaticSE: Started with arguments: -phred33 SRR098283.fastq SRR098283.fastq_trim.fastq SLIDINGWINDOW:4:20 MINLEN:20
+	Input Reads: 250000 Surviving: 193900 (77.56%) Dropped: 56100 (22.44%)
+	TrimmomaticSE: Completed successfully
 
 So that worked and we have a new fastq file.
 
@@ -279,9 +277,7 @@ We already know how to use a for loop to deal with this situation.
     >java -jar $TRIMMOMATIC/trimmomatic-0.30.jar SE $infile $outfile SLIDINGWINDOW:4:20 MINLEN:20
     >done
 
-Do you remember how the first specifies a variable that is assigned the value of each item in the list
-in turn?  We can call it whatever we like.  This time it is called infile.  Note that the third line
-of this for loop is creating a second variable called outfile.  We assign it the value of $infile
+Do you remember how the first specifies a variable that is assigned the value of each item in the list in turn?  We can call it whatever we like.  This time it is called infile.  Note that the third line of this for loop is creating a second variable called outfile.  We assign it the value of $infile
 with '_trim.fastq' appended to it.  The '\' escape character is used so the shell knows that whatever
 follows \ is not part of the variable name $infile.  There are no spaces before or after the '='.
 
