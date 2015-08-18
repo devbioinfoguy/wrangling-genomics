@@ -86,9 +86,10 @@ The main functions of FastQC are
 
 
 ## Running FASTQC
-### A. Stage your data
+###A. Stage your data
 
 Create a working directory for your analysis
+    
     cd
     mkdir dc_workshop
 
@@ -103,14 +104,40 @@ move it to our working directory
 
     mv ~/.dc_sampledata_lite/untrimmed_fastq/ ~/dc_workshop/data/
 
-###B. Run FastQC
+###B. Run FastQC  
 
-    cd ~/dc_workshop/data/untrimmed_fastq/
+Before we run FastQC, let's start an interactive session on the cluster
 
-To run the fastqc program, we call it from its location in '~/FastQC'.  fastqc will accept multiple 
-file names as input, so we can use the *.fastq wildcard.
+	srun -p interact --pty --mem 500 -t 0-06:00 /bin/bash
 
-    ~/FastQC/fastqc *.fastq
+*An interactive session is a very useful to test tools, workflows, run jobs that open new interactive windows (X11-forwarding) and so on.*
+
+Once your interactive job starts, notice that the command prompt no longer says rclogin; this is because we are not working on the login node any more.
+
+    cd ~/dc_workshop/data/untrimmed_fastq/  
+
+To run the FastQC program, we first need to load the appropriate module.
+
+	module load bio/fastqc-0.10.0
+
+Once a module for a tool is loaded, you have essentially made it directly available to you like any other basic UNIX command.
+
+FastQC will accept multiple file names as input, so we can use the *.fastq wildcard.
+
+	fastqc *.fastq
+
+*Did you notice how each file was processed serially? How do we speed this up?*
+
+Exit the interactive session and start a new one with 3 cores, and use the multi-threading funcionality of FastQC to run 3 jobs at once.
+
+	exit      #exit the current interactive session
+	
+	srun -p interact -n 3 --pty --mem 500 -t 0-06:00 /bin/bash      #start a new one with 3 cpus (-n 3)
+	
+	module load bio/fastqc-0.10.0      #you'll have to reload the module for the new session
+	
+	fastqc -t 3 *.fastq       #note the extra parameter we specified for 3 threads
+
 
 Now, let's create a home for our results
 
@@ -122,8 +149,9 @@ Now, let's create a home for our results
     mv *.html ~/dc_workshop/results/fastqc_untrimmed_reads/
 
 ###C. Results
-   ~/dc_workshop/results/fastqc_untrimmed_reads/
-   ls 
+   
+	~/dc_workshop/results/fastqc_untrimmed_reads/
+	ls 
    
 The zip files need to be unpacked with the 'unzip' program.  If we try to do them all
 at once.
@@ -131,7 +159,7 @@ at once.
     unzip *.zip
 
 Did it work? No, because 'unzip' expects to get only one zip file.  Welcome to the real world.
-We <i>could</i> do each file, one by one, but what if we have 500 files?  There is a smarter way.
+We *could* do each file, one by one, but what if we have 500 files?  There is a smarter way.
 We can save time by using a simple shell 'for loop' to iterate through the list of files in *.zip.
 After you type the first line, you will get a special '>' prompt to type next next lines.  
 You start with 'do', then enter your commands, then end with 'done' to execute the loop.
@@ -156,7 +184,7 @@ on your keyboard to recall the command, it will be shown like so:
 
 When you check your history later, it will help your remember what you did!
 
-### C. Document your work
+#### Document your work
 
 To save a record, let's cat all fastqc summary.txts into one full_report.txt and move this to ~/dc_workshop/docs. 
 You can use wildcards in paths as well as file names.  Do you remember how we said 'cat' is
