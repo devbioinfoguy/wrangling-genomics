@@ -16,6 +16,7 @@ Learning Objectives:
 To get started with this lesson, ensure you are logged into the cluster and are working
 in an interactive session on a compute node. Next, we will need to grab some data from an outside server using `wget` on the command line.
 
+#### Setting up
 Make sure you are in the dc_workshop directory first:
 
     cd /n/regal/datac/$USER/
@@ -73,12 +74,6 @@ you can execute the following commands
      source new-modules.sh
      module load bwa
      module load samtools
-     module load XXX
-     
-We need to index the reference genome for bwa and samtools. 
-
-     bwa index data/ref_genome/ecoli_rel606.fasta     #this is key in speedy alignment of reads
-     samtools faidx data/ref_genome/ecoli_rel606.fasta
 
 Create output paths for various intermediate and results files. The `-p` option means mkdir will create the whole path if it does not exist and refrain from complaining if it does exist
 
@@ -91,59 +86,154 @@ Create output paths for various intermediate and results files. The `-p` option 
 In the script, we will eventually loop over all of our files and have the cluster work
 on each one in parallel. For now, we're going to work on just one to set up our workflow:
 
-     ls -al data/trimmed_fastq/SRR097977.fastq
+     ls -alh ~/dc_workshop/data/trimmed_fastq/SRR098283.fastq_trim.fastq
 
-<!-- Insert more details on each of the steps!! -->
-Align the reads to the reference genome 
+#### Alignment to genome
+The alignment process consists of choosing an appropriate reference genome to map our reads against, and performing the read alignment using one of several alignment tools such as [NovoAlign](http://www.novocraft.com/main/page.php?s=novoalign) or [BWA](https://github.com/lh3/bwa). 
 
-    bwa aln genome fastq > SAIfile
+
+First, we need to index the reference genome for bwa, this is key in speedy alignment of reads 
+
+    bwa index data/ref_genome/ecoli_rel606.fasta
+
+The next step is the alignment, and the usage for bwa is `bwa aln genome.fasta fastq > SAIfile`
     
-So
+Have a look at the [bwa options page](http://bio-bwa.sourceforge.net/bwa.shtml). While we are running bwa with the default parameters here, your use case might require a change of parameters. NOTE: Always read the manual page for any tool before using and try to understand the options.
 
-    bwa aln data/ref_genome/ecoli_rel606.fasta data/trimmed_fastq/SRR097977.fastq \
-      > results/sai/SRR097977_aligned.sai
+    bwa aln data/ref_genome/ecoli_rel606.fasta ../data/trimmed_fastq/ \
+    SRR098283.fastq_trim.fastq > results/sai/SRR098283.trimmed.aligned.sai
 
-Convert the output to the SAM format
 
-    bwa samse genome SAIfile fastq > SAMfile
+Convert the output to the SAM format. Usage: `bwa samse genome SAIfile fastq > SAMfile`
 
-So
+	bwa samse data/ref_genome/ecoli_rel606.fasta results/sai/ \
+	SRR098283.trimmed.aligned.sai ../data/trimmed_fastq/SRR098283.fastq_trim.fastq > \
+	results/sam/SRR098283.trimmed.aligned.sam
 
-    bwa samse data/ref_genome/ecoli_rel606.fasta results/sai/SRR097977_aligned.sai \
-      data/trimmed_fastq/SRR097977.fastq > results/sam/SRR097977_aligned.sam
+Explore the ["SAM" format](http://samtools.sourceforge.net/). What key information is contained? What is in the header? 
 
-Convert the SAM file to BAM format
+	head results/sam/SRR098283.trimmed.aligned.sam
+	
+	@SQ	SN:NC_012967.1	LN:4629812
+	@PG	ID:bwa	PN:bwa	VN:0.7.9a-r786	CL:bwa samse data/ref_genome/ecoli_rel606.fasta 	results/sai/SRR098283.trimmed.aligned.sai ../data/trimmed_fastq/	SRR098283.fastq_trim.fastq
+	SRR098283.290	4	*	0	0	*	*	0	0	TCATTTTTTGNGCGCGCGGCGGANATTGACGNA	CC?ABBBBB:!=?7?:7;><?<A!@A@+;=<!:
+	SRR098283.297	16	NC_012967.1	3089646	25	35M	*	0	0	CGTNAAAAAAANCGGCGTTCTCGATCAAGTTCTGG	<;B!A@BAB?;!@B@39A?AA;B?A@@@A@B?BBBXT:A:U	NM:i:2	X0:i:1	X1:i:0	XM:i:2	XO:i:0	XG:i:0	MD:Z:3G7C23
+	SRR098283.299	16	NC_012967.1	793036	37	23M	*	0	0	AAAATGTGCGGGAATGGTCCGGT	8266?9'?;==?>8>>A?9;@@A	XT:A:U	NM:i:0	X0:i:1	X1:i:0	XM:i:0	XO:i:0	XG:i:0	MD:Z:23
+	SRR098283.300	16	NC_012967.1	315994	37	23M	*	0	0	TCCTTTGTTGTGTGCAGGGATCA	C*5CBBCBBCB@BB@BBBBBB<@	XT:A:U	NM:i:0	X0:i:1	X1:i:0	XM:i:0	XO:i:0	XG:i:0	MD:Z:23
+	SRR098283.302	0	NC_012967.1	1784850	25	35M	*	0	0	AGAAGAAATTAGAGAACTGGTTTNGGGGCTTNCCC	BB?C=BCCA?C7>A?A@A9;:?B!??938AB!B=@XT:A:U	NM:i:2	X0:i:1	X1:i:0	XM:i:2	XO:i:0	XG:i:0	MD:Z:23C7A3
+	SRR098283.303	16	NC_012967.1	3087882	37	31M	*	0	0	GGCGACANCTTGTTGATACTGGCAGGCGCAT	A:7@;7A!?@CBBCBBC?AB?BABAB=AABB	XT:A:U	NM:i:1	X0:i:1	X1:i:0	XM:i:1	XO:i:0	XG:i:0	MD:Z:7G23
+	SRR098283.306	0	NC_012967.1	3823753	37	25M	*	0	0	GGTCAGGAAACTCACCATCACCGNC	?BABB:+BBABABCBAB?BC?B4!B	XT:A:U	NM:i:1	X0:i:1	X1:i:0	XM:i:1	XO:i:0	XG:i:0	MD:Z:23C1
+	SRR098283.307	0	NC_012967.1	3109908	25	35M	*	0	0	GGTTTACCACCACTGCGGGCAGCNTAAAACANTGC	CCBCCBCCCBCBCBB@@=;=B7@!BA@;@=A!CB:XT:A:U	NM:i:2	X0:i:1	X1:i:0	XM:i:2	XO:i:0	XG:i:0	MD:Z:23A7T3
 
-    samtools view -S -b results/sam/$SRR097977_aligned.sam \
-      > results/bam/SRR097977_aligned.bam
+Convert the SAM file to BAM format: 
 
-Sort the BAM file
 
-    samtools sort -f results/bam/SRR097977_aligned.bam \
-      results/bam/SRR097977_aligned_sorted.bam
+    samtools view -S -b results/sam/SRR098283.trimmed.aligned.sam > \
+    results/bam/SRR098283.trimmed.aligned.bam
 
-Index the BAM file for display purposes
+*BAM is the binary version of SAM and is recommended for use with downstream applications and for storage. More detailed information about these formats can be [found here](https://samtools.github.io/hts-specs/SAMv1.pdf)*
 
-    samtools index results/bam/SRR097977_aligned_sorted.bam
+Sort the BAM file:
 
-Do the first pass on variant calling by counting
-read coverage
+    samtools sort -O 'bam' -T temp.prefix results/bam/SRR098283.trimmed.aligned.bam > \
+    results/bam/SRR098283.trimmed.aligned.sorted.bam
+
+*BAM files can be sorted in multiple ways, e.g. by location of alignment on the chromosome, by read name, etc. It is important to be aware that different alignment tools will output differently sorted SAM/BAM, and different downstream tools require differently sorted alignment files as input.*
+
+#### Assess the alignment (visualization)
+
+Index the BAM and reference fasta file for visualization with IGV:
+
+    samtools index results/bam/SRR098283.trimmed.aligned.sorted.bam
+    
+	samtools faidx data/ref_genome/ecoli_rel606.fasta    
+	#We will need the indexed fasta for variant calling as well. 
+
+**Transfer files to your laptop**
+
+Using [FileZilla](https://filezilla-project.org/), transfer the following files to your local machine, 
+`results/bam/SRR098283.trimmed.aligned.sorted.bam`,
+
+`results/bam/SRR098283.trimmed.aligned.sorted.bam.bai`, 
+
+`data/ref_genome/ecoli_rel606.fasta`
+
+**Visualize**
+
+[IGV](https://www.broadinstitute.org/software/igv/download) tutorial
+
+#### Call variants
+
+Do the first pass on variant calling by counting read coverage with samtools [mpileup](http://samtools.sourceforge.net/mpileup.shtml):
 
     samtools mpileup -g -f data/ref_genome/ecoli_rel606.fasta \
       results/bam/SRR097977_aligned_sorted.bam > results/bcf/SRR097977_raw.bcf
 
-Do the SNP calling with bcftools
+*We have only generated a file with coverage and nucleotide information for every base, to actually identify variants, we have to use a different tool from the samtools suite called [bcftools](https://samtools.github.io/bcftools/bcftools.html).*
 
-    bcftools view -bvcg results/bcf/SRR097977_raw.bcf > results/bcf/SRR097977_variants.bcf
+Do the SNP calling with bcftools, and:
 
-Filter the SNPs for the final output
+    bcftools view -vc  -O b results/bcf/SRR097977_raw.bcf > results/bcf/SRR097977_variants.bcf
 
-    bcftools view results/bcf/SRR097977_variants.bcf | vcfutils.pl \
-      varFilter - > results/vcf/SRR097977_final_variants.vcf
+Filter the SNPs for the final output in VCF format, using vcfutils.pl:
+
+    bcftools view results/bcf/SRR097977_variants.bcf | vcfutils.pl varFilter - > \
+    results/vcf/SRR097977_final_variants.vcf
+
+Explore the VCF format:
+
+	less results/vcf/SRR097977_final_variants.vcf
+
+You will see the header which describes the format, when the file was created, the tools version along with the command line parameters used and some additional column information:
+
+	##reference=file://data/ref_genome/ecoli_rel606.fasta
+	##contig=<ID=NC_012967.1,length=4629812>
+	##ALT=<ID=X,Description="Represents allele(s) other than observed.">
+	##INFO=<ID=INDEL,Number=0,Type=Flag,Description="Indicates that the variant is an INDEL.">
+	##INFO=<ID=IDV,Number=1,Type=Integer,Description="Maximum number of reads supporting an indel">
+	##INFO=<ID=IMF,Number=1,Type=Float,Description="Maximum fraction of reads supporting an indel">
+	##INFO=<ID=DP,Number=1,Type=Integer,Description="Raw read depth">
+	.
+	.
+	.
+	.
+	##bcftools_callVersion=1.2+htslib-1.2.1
+	##bcftools_callCommand=call -cv -O b results/bcf/SRR097977_raw.bcf
+	##bcftools_viewVersion=1.2+htslib-1.2.1
+	##bcftools_viewCommand=view results/bcf/SRR097977_variants.bcf
+
+Followed by the variant information:
+
+	#CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  results/bam/SRR098283.trimmed.aligned.sorted.bam
+	NC_012967.1     110152  .       T       A       18.0963 .       DP=3;VDB=0.74;SGB=-0.453602;RPB=1;MQB=1;MQSB=1;BQB=1;MQ0F=0;AF1=0.502509;AC1=1;DP4=1,0,0,2;MQ=37;FQ=-7.78372;PV4=0.333333,1,1,0.20326   GT:PL   0/1:48,0,20
+	NC_012967.1     270633  .       G       T       26.7735 .       DP=2;VDB=0.76;SGB=-0.453602;MQ0F=0;AF1=1;AC1=2;DP4=0,0,2,0;MQ=37;FQ=-32.988     GT:PL   1/1:58,6,0
+	NC_012967.1     475173  .       G       C       21.7931 .       DP=2;VDB=0.14;SGB=-0.453602;MQSB=1;MQ0F=0;AF1=1;AC1=2;DP4=0,0,1,1;MQ=37;FQ=-32.988      GT:PL   1/1:53,6,0
+	NC_012967.1     1017485 .       G       T       5.46014 .       DP=5;VDB=0.58;SGB=-0.453602;RPB=0;MQB=1;MQSB=1;BQB=0.5;MQ0F=0;AF1=0.499901;AC1=1;DP4=0,3,2,0;MQ=37;FQ=7.77964;PV4=0.1,0.268358,1,1      GT:PL   0/1:34,0,56
+
+The first columns represent the information we have about a predicted variation. 
+
+CHROM and POS provide the config information and position where the variation occurs. 
+
+ID is a `.` until we add annotation information. 
+
+REF and ALT represent the genotype at the reference and in the sample, always on the foward strand. 
+
+QUAL then is the Phred scaled probablity that the observed variant exists at this site. Ideally you would need nothing else to filter out bad variant calls, but in reality we still need to filter on multiple other metrics. 
+
+The FILTER field is a `.`, i.e. no filter has been applied, otherwise it will be set to either PASS or show the (quality) filters this variant failed. 
+
+The last columns contains the genotypes and can be a bit more tricky to decode. In brief, we have:
+* GT: The genotype of this sample which for a diploid genome is encoded with a 0 for the REF allele, 1 for the first ALT allele, 2 for the second and so on. So 0/0 means homozygous reference, 0/1 is heterozygous, and 1/1 is homozygous for the alternate allele. For a diploid organism, the GT field indicates the two alleles carried by the sample, encoded by a 0 for the REF allele, 1 for the first ALT allele, 2 for the second ALT allele, etc. When there's a single ALT allele (by far the more common case), GT will be either:
+* GQ: the Phred-scaled confidence for the genotype
+* AD, DP: Reflect the depth per allele by sample and coverage
+* PL: the likelihoods of the given genotypes
+
+The BROAD's [VCF guide](https://www.broadinstitute.org/gatk/guide/article?id=1268) is an excellent place to learn more about VCF file format.
+
+#### Calling Variants from all files?
 
 That's a lot of work, yes? But you have five more FASTQ files to go...
 
-Exercises:
 - Try running this workflow on a different FASTQ file. What did you have to do differently
 in order to get this workflow to work?
 - Remembering what commands *and* what parameters to type can be pretty daunting. What can

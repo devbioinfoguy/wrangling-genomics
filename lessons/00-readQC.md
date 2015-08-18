@@ -271,7 +271,9 @@ Let's make a new directory and place this trimmed files there:
 	mv SRR098283.fastq_trim.fastq ../trimmed_fastq
     
 
-## Exercise - Running Trimmomatic on all the files
+## Exercise
+
+### (1) Running Trimmomatic on all the files
 
 #### For loop
 Now we know how to run trimmomatic but there is some good news and bad news.  
@@ -292,7 +294,12 @@ Make sure that after you have run the trimming on all the samples, you transfer 
 #### Shell script
 Try putting this "for loop" in a shell script and running it. Running the command via a script means that you will have a more permanent record of how you ran your analysis (include the modules you load in the script too!), rather than relying on the temporary nature of stored history.
 
+### (2) FastQC on trimmed files
 
+Write a shell script that: 
+
+* runs fastqc on all the trimmed files in parallel
+* transfers the fastqc output to a new folder in `~/dc_workshop/results` called `fastqc_trimmed_reads`
 
 
 
