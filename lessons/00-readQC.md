@@ -86,9 +86,10 @@ The main functions of FastQC are
 
 
 ## Running FASTQC
-### A. Stage your data
+###A. Stage your data
 
 Create a working directory for your analysis
+    
     cd
     mkdir dc_workshop
 
@@ -103,14 +104,40 @@ move it to our working directory
 
     mv ~/.dc_sampledata_lite/untrimmed_fastq/ ~/dc_workshop/data/
 
-###B. Run FastQC
+###B. Run FastQC  
 
-    cd ~/dc_workshop/data/untrimmed_fastq/
+Before we run FastQC, let's start an interactive session on the cluster
 
-To run the fastqc program, we call it from its location in '~/FastQC'.  fastqc will accept multiple 
-file names as input, so we can use the *.fastq wildcard.
+	srun -p interact --pty --mem 500 -t 0-06:00 /bin/bash
 
-    ~/FastQC/fastqc *.fastq
+*An interactive session is a very useful to test tools, workflows, run jobs that open new interactive windows (X11-forwarding) and so on.*
+
+Once your interactive job starts, notice that the command prompt no longer says rclogin; this is because we are not working on the login node any more.
+
+    cd ~/dc_workshop/data/untrimmed_fastq/  
+
+To run the FastQC program, we first need to load the appropriate module.
+
+	module load centos6/fastqc-0.10.1
+
+Once a module for a tool is loaded, you have essentially made it directly available to you like any other basic UNIX command.
+
+FastQC will accept multiple file names as input, so we can use the *.fastq wildcard.
+
+	fastqc *.fastq
+
+*Did you notice how each file was processed serially? How do we speed this up?*
+
+Exit the interactive session and start a new one with 3 cores, and use the multi-threading funcionality of FastQC to run 3 jobs at once.
+
+	exit      #exit the current interactive session
+	
+	srun -p interact -n 3 --pty --mem 500 -t 0-06:00 /bin/bash      #start a new one with 3 cpus (-n 3)
+	
+	module load centos6/fastqc-0.10.1      #you'll have to reload the module for the new session
+	
+	fastqc -t 3 *.fastq       #note the extra parameter we specified for 3 threads
+
 
 Now, let's create a home for our results
 
@@ -122,16 +149,17 @@ Now, let's create a home for our results
     mv *.html ~/dc_workshop/results/fastqc_untrimmed_reads/
 
 ###C. Results
-   ~/dc_workshop/results/fastqc_untrimmed_reads/
-   ls 
+   
+	~/dc_workshop/results/fastqc_untrimmed_reads/
+	ls 
    
 The zip files need to be unpacked with the 'unzip' program.  If we try to do them all
 at once.
 
     unzip *.zip
 
-Did it work? No, because 'unzip' expects to get only one zip file.  Welcome to the real world.
-We <i>could</i> do each file, one by one, but what if we have 500 files?  There is a smarter way.
+Did it work? No, because `unzip` expects to get only one zip file.  Welcome to the real world.
+We *could* do each file, one by one, but what if we have 500 files?  There is a smarter way.
 We can save time by using a simple shell 'for loop' to iterate through the list of files in *.zip.
 After you type the first line, you will get a special '>' prompt to type next next lines.  
 You start with 'do', then enter your commands, then end with 'done' to execute the loop.
@@ -141,8 +169,7 @@ You start with 'do', then enter your commands, then end with 'done' to execute t
     > unzip $zip
     > done
 
-Note that, in the first line, we create a variable named 'zip'.  After that, we call that variable
-with the syntax $zip.  $zip is assigned the value of each item (file) in the list *.zip, once for each
+Note that, in the first line, we create a variable named `zip`.  After that, we call that variable with the syntax `$zip`. `$zip` is assigned the value of each item (file) in the list *.zip, once for each
 iteration of the loop.
 
 This loop is basically a simple program.  When it runs, it will run unzip 
@@ -156,10 +183,10 @@ on your keyboard to recall the command, it will be shown like so:
 
 When you check your history later, it will help your remember what you did!
 
-### C. Document your work
+#### Document your work
 
 To save a record, let's cat all fastqc summary.txts into one full_report.txt and move this to ~/dc_workshop/docs. 
-You can use wildcards in paths as well as file names.  Do you remember how we said 'cat' is
+You can use wildcards in paths as well as file names.  Do you remember how we said `cat` is
 really meant for concatenating text files?
     
     cat */summary.txt > ~/dc_workshop/docs/fastqc_summaries.txt
@@ -168,17 +195,17 @@ really meant for concatenating text files?
 ##How to clean reads using *Trimmomatic*
 ###A detailed explanation of features
 
-Once we have an idea of the quality of our raw data, it is time to trim away adapters and filter out poor quality score reads. To accomplish this task we will use *Trimmomatic* (http://www.usadellab.org/cms/?page=trimmomatic).
+Once we have an idea of the quality of our raw data, it is time to trim away adapters and filter out poor quality score reads. To accomplish this task we will use [*Trimmomatic*](http://www.usadellab.org/cms/?page=trimmomatic).
 
 *Trimmomatic* is a java based program that can remove sequencer specific reads and nucleotides that fall below a certain threshold. *Trimmomatic* can be multithreaded to run quickly. 
 
 Because *Trimmomatic* is java based, it is run using the command:
 
-**_java jar trimmomatic-0.32.jar_**
+`java jar trimmomatic-0.30.jar`
 
 What follows this are the specific commands that tells the program exactly how you want it to operate. *Trimmomatic* has a variety of options and parameters:
 
-* **_-threds_** How many processors do you want *Trimmomatic* to run with?
+* **_-threads_** How many processors do you want *Trimmomatic* to run with?
 * **_SE_** or **_PE_** Single End or Paired End reads?
 * **_-phred33_** or **_-phred64_** Which quality score do your reads have?
 * **_SLIDINGWINDOW_** Perform sliding window trimming, cutting once the average quality within the window falls below a threshold.
@@ -192,57 +219,63 @@ What follows this are the specific commands that tells the program exactly how y
 
 A generic command for *Trimmomatic* looks like this:
 
-**_java jar trimmomatic-0.32.jar SE -thr _**
+`java jar trimmomatic-0.30.jar SE -thr `
 
 A complete command for *Trimmomatic* will look something like this:
 
-**_java jar trimmomatic-0.32.jar SE -threads 4 -phred64 SRR_0156.fastq SRR_1056_trimmed.fastq ILLUMINACLIP:SRR_adapters.fa SLIDINGWINDOW:4:20 _**
+`java jar trimmomatic-0.30.jar SE -threads 4 -phred64 SRR_0156.fastq SRR_1056_trimmed.fastq ILLUMINACLIP:SRR_adapters.fa SLIDINGWINDOW:4:20`
 
 This command tells *Trimmomatic* to run on a Single End file (``SRR_0156.fastq``, in this case), the output file will be called ``SRR_0156_trimmed.fastq``,  there is a file with Illumina adapters called ``SRR_adapters.fa``, and we are using a sliding window of size 4 that will remove those bases if their phred score is below 20.
 
 
-## Exercise - Running Trimmomatic
+###Running Trimmomatic
 
 Go to the untrimmed fastq data location:
 
-     cd /home/dcuser/dc_workshop/data/untrimmed_fastq
+     cd ~/dc_workshop/data/untrimmed_fastq
 
+The command line incantation for trimmomatic is more complicated.  This is where what you have been learning about accessing your command line history will start to become important.
 
-The command line incantation for trimmomatic is more complicated.  This is where what you have
-been learning about accessing your command line history will start to become important.
+Let's load the trimmomatic module:
 
-The general form of the command is:
+	module load centos6/Trimmomatic-0.30
 
-    java -jar ~/Trimmomatic-0.32/trimmomatic-0.32.jar inputfile outputfile OPTION:VALUE...
+The general form of the command on this cluster is:
 
-'java -jar' calls the Java program, which is needed to run trimmotic, which lived in a 'jar' file
-(trimmomatic-0.32.jar), a special kind of java archive that is often used for programs written in the
-Java programing language.  If you see a new program that ends in '.jar', you will know it is a 
-java program that is executed 'java -jar program name'.  The 'SE' argument is a keyword that specifies
-we are working with single-end reads.
+    java -jar $TRIMMOMATIC/trimmomatic-0.30.jar SE -phred64 inputfile outputfile OPTION:VALUE... # DO NOT RUN THIS
 
-The next two arguments are input file and output file names.  These are then followed by a series of
-options. The specifics of how options are passed to a program are different depending on the program.
-You will always have to read the manual of a new program to learn which way it expects its command-line
-aruments to be composed.
+`java -jar` calls the Java program, which is needed to run trimmotic, which lived in a 'jar' file (trimmomatic-0.30.jar), a special kind of java archive that is often used for programs written in the Java programing language.  If you see a new program that ends in '.jar', you will know it is a java program that is executed `java -jar program name`.  The 'SE' argument is a keyword that specifies we are working with single-end reads.
+
+NOTE: The `$TRIMMOMATIC` variable denoting the path to the .jar file is created on this cluster for ease of use, and is specific to this set up.
+
+The next two arguments are input file and output file names. These are then followed by a series of options. The specifics of how options are passed to a program are different depending on the program. You will always have to read the manual of a new program to learn which way it expects its command-line aruments to be composed.
 
 
 So, for the single fastq input file 'SRR098283.fastq', the command would be:
 
-    java -jar /home/dcuser/Trimmomatic-0.32/trimmomatic-0.32.jar SE SRR098283.fastq \
+    java -jar $TRIMMOMATIC/trimmomatic-0.30.jar SE -phred33 SRR098283.fastq \
     SRR098283.fastq_trim.fastq SLIDINGWINDOW:4:20 MINLEN:20
 
-    TrimmomaticSE: Started with arguments: SRR098283.fastq SRR098283.fastq_trim.fastq SLIDINGWINDOW:4:20 MINLEN:20
-    Automatically using 2 threads
-    Quality encoding detected as phred33
-    Input Reads: 21564058 Surviving: 17030985 (78.98%) Dropped: 4533073 (21.02%)
-    TrimmomaticSE: Completed successfully
+	TrimmomaticSE: Started with arguments: -phred33 SRR098283.fastq SRR098283.fastq_trim.fastq SLIDINGWINDOW:4:20 MINLEN:20
+	Input Reads: 250000 Surviving: 193900 (77.56%) Dropped: 56100 (22.44%)
+	TrimmomaticSE: Completed successfully
 
-So that worked and we have a new fastq file.
+We now have a new fastq file.
 
     ls SRR098283*
     SRR098283.fastq  SRR098283.fastq_trim.fastq
 
+Let's make a new directory and place this trimmed files there:
+	
+	mkdir ../trimmed_fastq
+	mv SRR098283.fastq_trim.fastq ../trimmed_fastq
+    
+
+## Exercise
+
+### (1) Running Trimmomatic on all the files
+
+#### For loop
 Now we know how to run trimmomatic but there is some good news and bad news.  
 One should always ask for the bad news first.  Trimmomatic only operates on 
 one input file at a time and we have more than one input file.  The good news?
@@ -251,18 +284,22 @@ We already know how to use a for loop to deal with this situation.
     for infile in *.fastq
     >do
     >outfile=$infile\_trim.fastq
-    >java -jar ~/Trimmomatic-0.32/trimmomatic-0.32.jar SE $infile $outfile SLIDINGWINDOW:4:20 MINLEN:20
+    >java -jar $TRIMMOMATIC/trimmomatic-0.30.jar SE -phred33 $infile $outfile SLIDINGWINDOW:4:20 MINLEN:20
     >done
 
-Do you remember how the first specifies a variable that is assigned the value of each item in the list
-in turn?  We can call it whatever we like.  This time it is called infile.  Note that the third line
-of this for loop is creating a second variable called outfile.  We assign it the value of $infile
-with '_trim.fastq' appended to it.  The '\' escape character is used so the shell knows that whatever
-follows \ is not part of the variable name $infile.  There are no spaces before or after the '='.
+Do you remember how the first specifies a variable that is assigned the value of each item in the list in turn?  We can call it whatever we like.  This time it is called infile.  Note that the third line of this for loop is creating a second variable called outfile.  We assign it the value of $infile with '_trim.fastq' appended to it.  The '\' escape character is used so the shell knows that whatever follows \ is not part of the variable name $infile.  There are no spaces before or after the '='.
 
+Make sure that after you have run the trimming on all the samples, you transfer the trimmed files to the trimmed_fastq directory. The `*` comes in handy here too.
 
+#### Shell script
+Try putting this "for loop" in a shell script and running it. Running the command via a script means that you will have a more permanent record of how you ran your analysis (include the modules you load in the script too!), rather than relying on the temporary nature of stored history.
 
+### (2) FastQC on trimmed files
 
+Write a shell script that: 
+
+* runs fastqc on all the trimmed files in parallel
+* transfers the fastqc output to a new folder in `~/dc_workshop/results` called `fastqc_trimmed_reads`
 
 
 
