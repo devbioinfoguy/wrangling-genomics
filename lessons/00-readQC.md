@@ -118,7 +118,7 @@ Once your interactive job starts, notice that the command prompt no longer says 
 
 To run the FastQC program, we first need to load the appropriate module.
 
-	module load bio/fastqc-0.10.0
+	module load centos6/fastqc-0.10.1
 
 Once a module for a tool is loaded, you have essentially made it directly available to you like any other basic UNIX command.
 
@@ -134,7 +134,7 @@ Exit the interactive session and start a new one with 3 cores, and use the multi
 	
 	srun -p interact -n 3 --pty --mem 500 -t 0-06:00 /bin/bash      #start a new one with 3 cpus (-n 3)
 	
-	module load bio/fastqc-0.10.0      #you'll have to reload the module for the new session
+	module load centos6/fastqc-0.10.1      #you'll have to reload the module for the new session
 	
 	fastqc -t 3 *.fastq       #note the extra parameter we specified for 3 threads
 
@@ -196,7 +196,7 @@ really meant for concatenating text files?
 ##How to clean reads using *Trimmomatic*
 ###A detailed explanation of features
 
-Once we have an idea of the quality of our raw data, it is time to trim away adapters and filter out poor quality score reads. To accomplish this task we will use *Trimmomatic* (http://www.usadellab.org/cms/?page=trimmomatic).
+Once we have an idea of the quality of our raw data, it is time to trim away adapters and filter out poor quality score reads. To accomplish this task we will use [*Trimmomatic*](http://www.usadellab.org/cms/?page=trimmomatic).
 
 *Trimmomatic* is a java based program that can remove sequencer specific reads and nucleotides that fall below a certain threshold. *Trimmomatic* can be multithreaded to run quickly. 
 
@@ -206,7 +206,7 @@ Because *Trimmomatic* is java based, it is run using the command:
 
 What follows this are the specific commands that tells the program exactly how you want it to operate. *Trimmomatic* has a variety of options and parameters:
 
-* **_-threds_** How many processors do you want *Trimmomatic* to run with?
+* **_-threads_** How many processors do you want *Trimmomatic* to run with?
 * **_SE_** or **_PE_** Single End or Paired End reads?
 * **_-phred33_** or **_-phred64_** Which quality score do your reads have?
 * **_SLIDINGWINDOW_** Perform sliding window trimming, cutting once the average quality within the window falls below a threshold.
@@ -233,31 +233,28 @@ This command tells *Trimmomatic* to run on a Single End file (``SRR_0156.fastq``
 
 Go to the untrimmed fastq data location:
 
-     cd /home/dcuser/dc_workshop/data/untrimmed_fastq
+     cd ~/dc_workshop/data/untrimmed_fastq
 
+The command line incantation for trimmomatic is more complicated.  This is where what you have been learning about accessing your command line history will start to become important.
 
-The command line incantation for trimmomatic is more complicated.  This is where what you have
-been learning about accessing your command line history will start to become important.
+Let's load the trimmomatic module:
 
-The general form of the command is:
+	module load centos6/Trimmomatic-0.30
 
-    java -jar ~/Trimmomatic-0.32/trimmomatic-0.32.jar inputfile outputfile OPTION:VALUE...
+The general form of the command on this cluster is:
 
-'java -jar' calls the Java program, which is needed to run trimmotic, which lived in a 'jar' file
-(trimmomatic-0.32.jar), a special kind of java archive that is often used for programs written in the
-Java programing language.  If you see a new program that ends in '.jar', you will know it is a 
-java program that is executed 'java -jar program name'.  The 'SE' argument is a keyword that specifies
-we are working with single-end reads.
+    java -jar $TRIMMOMATIC/trimmomatic-0.30.jar SE inputfile outputfile OPTION:VALUE... # DO NOT RUN THIS
 
-The next two arguments are input file and output file names.  These are then followed by a series of
-options. The specifics of how options are passed to a program are different depending on the program.
-You will always have to read the manual of a new program to learn which way it expects its command-line
-aruments to be composed.
+'java -jar' calls the Java program, which is needed to run trimmotic, which lived in a 'jar' file (trimmomatic-0.30.jar), a special kind of java archive that is often used for programs written in the Java programing language.  If you see a new program that ends in '.jar', you will know it is a java program that is executed 'java -jar program name'.  The 'SE' argument is a keyword that specifies we are working with single-end reads.
+
+NOTE: The "$TRIMMOMATIC" variable denoting the path to the .jar file is created on this cluster for ease of use, and is specific to this set up.
+
+The next two arguments are input file and output file names. These are then followed by a series of options. The specifics of how options are passed to a program are different depending on the program. You will always have to read the manual of a new program to learn which way it expects its command-line aruments to be composed.
 
 
 So, for the single fastq input file 'SRR098283.fastq', the command would be:
 
-    java -jar /home/dcuser/Trimmomatic-0.32/trimmomatic-0.32.jar SE SRR098283.fastq \
+    java -jar $TRIMMOMATIC/trimmomatic-0.30.jar SE SRR098283.fastq \
     SRR098283.fastq_trim.fastq SLIDINGWINDOW:4:20 MINLEN:20
 
     TrimmomaticSE: Started with arguments: SRR098283.fastq SRR098283.fastq_trim.fastq SLIDINGWINDOW:4:20 MINLEN:20
@@ -279,7 +276,7 @@ We already know how to use a for loop to deal with this situation.
     for infile in *.fastq
     >do
     >outfile=$infile\_trim.fastq
-    >java -jar ~/Trimmomatic-0.32/trimmomatic-0.32.jar SE $infile $outfile SLIDINGWINDOW:4:20 MINLEN:20
+    >java -jar $TRIMMOMATIC/trimmomatic-0.30.jar SE $infile $outfile SLIDINGWINDOW:4:20 MINLEN:20
     >done
 
 Do you remember how the first specifies a variable that is assigned the value of each item in the list
