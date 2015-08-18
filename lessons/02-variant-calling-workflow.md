@@ -173,12 +173,14 @@ Do the first pass on variant calling by counting read coverage with samtools [mp
 
 Do the SNP calling with bcftools, and:
 
-    bcftools view -vc  -O b results/bcf/SRR097977_raw.bcf > results/bcf/SRR097977_variants.bcf
+    bcftools call -vc -O b results/bcf/SRR097977_raw.bcf > results/bcf/SRR097977_variants.bcf
 
 Filter the SNPs for the final output in VCF format, using vcfutils.pl:
 
     bcftools view results/bcf/SRR097977_variants.bcf | vcfutils.pl varFilter - > \
     results/vcf/SRR097977_final_variants.vcf
+	
+*`bcftools view` converts the binary format of bcf files into human readable format (tab-delimited) for `vcfutils.pl` to perform the filtering. Note that the output is in VCF format, which is a text format.*
 
 Explore the VCF format:
 
@@ -247,7 +249,7 @@ The easiest way for you to be able to repeat this process is to capture the step
 you've performed in a bash script. And you've already learned how to do this in previous
 lessons. So...
 
-Exercises:
+#### Exercises:
 - Using your command history, create a script file that will repeat these commands
 for you. Name your script *run_variant_call_on_file.sh*. Delete your results 
 directories, and run your script. Do you get all the proper output files?
@@ -275,7 +277,7 @@ or within scripts that we could optimize?
 A couple of changes need to be made to make this script more friendly to both changes
 in the workflow and changes in files. 
 
-The first is major change is allowing a change in the filename. Thus at the start of 
+The first major change is allowing a change in the filename. Thus at the start of 
 the script let's capture an input parameter that must be supplied with the script name.
 This input parameter will be the name of the file we want to work on:
 
@@ -285,6 +287,14 @@ And we'll add a shortcut to store the location to the genome reference FASTA fil
 
      # location to genome reference FASTA file
      genome=data/ref_genome/ecoli_rel606.fasta
+
+Make sure you are loading all the correct modules/tools for the script to run:
+    
+    # set up our software environment...
+    source new-modules.sh
+    module load bwa
+    module load samtools
+    module load bcftools
 
 Now, walking thru the code, we can make some substitutions. To index with bwa and samtools
 we can run those commands on the genome variable ($genome) so these value aren't 
@@ -345,7 +355,7 @@ analytical workflow>
     samtools view -S -b $sam > $bam
 
     # Sort the BAM file
-    samtools sort -f $bam $sorted_bam
+    samtools sort -O 'bam' -T temp.prefix $bam $sorted_bam
 
     # Index the BAM file for display purposes
     samtools index $sorted_bam
@@ -354,14 +364,20 @@ analytical workflow>
     samtools mpileup -g -f $genome $sorted_bam > $raw_bcf
 
     # Do the SNP calling with bcftools
-    bcftools view -bvcg $raw_bcf > $variants
+    bcftools call -vc -O b $raw_bcf > $variants
 
     # And finally, filter the SNPs for the final output
-    bcftools view $variants | /usr/share/samtools/vcfutils.pl varFilter - > $final_variants
+    bcftools view $variants | vcfutils.pl varFilter - > $final_variants
 
-And finally, we need to add our SLURM directives in the *top* of the file so that 
-the scheduler knows what resources we need to use in order to run our job on the
-compute nodes. And we have to say what software we want to load. 
+This script is now ready for submission:
+	
+	sh run_variant_call_on_file.sh <name of fastq>
+
+## Parallelizing workflow for efficiency
+
+To run the same script on a worker node on the cluster via the job scheduler, we need to add our **SLURM directives** at the **beginning** of the script. This is so that the scheduler knows what resources we need in order to run our job on the
+compute node(s). 
+
 So the top of the file should look like:
 
     #!/bin/bash
@@ -377,28 +393,17 @@ So the top of the file should look like:
     #SBATCH --mail-type=ALL     # Type of email notification: BEGIN,END,FAIL,ALL
     #SBATCH --mail-user=rmf@123.com # Email to which notifications will be sent 
 
-    # set up our software environment...
-    source new-modules.sh
-    module load bwa
-    module load samtools
-    module load bcftools
+    #rest of the script we already made
 
-    # now do work...
-
-Test running on one file... blah
-
-XXX fill in details here.
-     
-Now we need to actually run this to compute the values for all our FASTQ files. And
-now is where we'll use the for loop with the power of the cluster. What we'd like to do
-is run this script on a compute node for every FASTQ -- pleasantly parallelizing our
-workflow.
+What we'd like to do is run this script on a compute node for every FASTQ -- pleasantly parallelizing our workflow. And now is where we'll use the for loop with the power of the cluster. 
 
     for fq in data/trimmed_fastq/*.fastq
     do
       sbatch run_variant_call_on_file.sh $fq
       sleep 1
     done
+
+***Make sure you run the For loop-containing submission script from the login node***
 
 What you should see on the output of your screen would be the jobIDs that are returned
 from the scheduler for each of the jobs that you submitted.
@@ -410,15 +415,6 @@ Don't forget about the scancel command, should something go wrong and you need t
 cancel your jobs.
 
 
-Exercises:
+#### Exercises:
 - Change the script so that one can include an additional variable to point to
  a results directory.
-    
-<!--
-****
-**Exercise**
-Run the script run_variant_calling.sh
-****
--->
-
-
