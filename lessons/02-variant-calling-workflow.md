@@ -16,19 +16,21 @@ Learning Objectives:
 #### Setting up
 
 To get started with this lesson, ensure you are logged into the cluster and are working
-in an interactive session on a compute node (single core). Next, we will need to grab some data from an outside server using `wget` on the command line.
+in an interactive session on a compute node (single core). 
 
-Make sure you are in the dc_workshop directory first before running the following command:
+*Next, and **you may have already done this yesterday**, we will need to grab some data from an outside server using `wget` on the command line.*
+
+*Make sure you are in the dc_workshop directory first before running the following command:*
     
     wget http://devbioinfoguy.github.io/wrangling-genomics-HPC/data/variant_calling.tar.gz
 
-The file 'variant_calling.tar.gz' is what is commonly called a **"tarball"**, which is
+*The file 'variant_calling.tar.gz' is what is commonly called a **"tarball"**, which is
 a compressed archive similar to the .zip files we have seen before.  We can decompress
-this archive using the command below.
+this archive using the command below.*
 
     tar xvf variant_calling.tar.gz
 
-This will create a directory tree that contains some input data (reference genome and fastq files) and a shell script that details the series of commands used to run the variant calling workflow.
+*This will create a directory tree that contains some input data (reference genome and fastq files) and a shell script that details the series of commands used to run the variant calling workflow.*
 
 	variant_calling
 	├── data
