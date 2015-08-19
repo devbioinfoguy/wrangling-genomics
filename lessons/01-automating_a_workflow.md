@@ -23,18 +23,17 @@ a script.
 The basic anatomy of a shell script is a file with a list of commands.
 That is also the definition of pretty much any computer program.
 
-<pre>
-#!/bin/bash
 
-cd ~/dc_sample_data
+	#!/bin/bash
 
-for file in untrimmed_fastq/*.fastq
-do
-  echo "My file name is $file"
-done
-</pre>
+	cd ~/dc_sample_data
 
-This looks a lot like the for loops we saw earlier.  In fact, it
+	for file in untrimmed_fastq/*.fastq
+	do
+		echo "My file name is $file"
+	done
+
+This looks a lot like the `for loops` we saw earlier.  In fact, it
 is no different, apart from using indentation and the lack of the '>'
 prompts; it's just saved in a text file.  
 The line at the top ('#!/bin/bash') is commonly called the shebang line,
@@ -78,7 +77,7 @@ the path to your script, which is './' if it is in the same directory.
 ****
 **Exercise**
 1) Use nano to save the code above to a script called myscript.sh
-2) run the script
+2) Run the script
 ****
 
 
@@ -90,8 +89,12 @@ workflow from this morning, with a few extra "echo" statements.
 <pre>
 cd ~/dc_workshop/data/untrimmed_fastq/
 
+source new-modules.sh
+module load fastqc
+	
 echo "Running fastqc..."
-~/FastQC/fastqc *.fastq
+
+fastqc *.fastq
 
 mkdir -p ~/dc_workshop/results/fastqc_untrimmed_reads
 
