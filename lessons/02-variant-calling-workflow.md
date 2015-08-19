@@ -13,16 +13,16 @@ Learning Objectives:
 
 ## Running a Workflow
 
-To get started with this lesson, ensure you are logged into the cluster and are working
-in an interactive session on a compute node. Next, we will need to grab some data from an outside server using `wget` on the command line.
-
 #### Setting up
-Make sure you are in the dc_workshop directory first:
 
-    cd /n/regal/datac/$USER/
+To get started with this lesson, ensure you are logged into the cluster and are working
+in an interactive session on a compute node (single core). Next, we will need to grab some data from an outside server using `wget` on the command line.
+
+Make sure you are in the dc_workshop directory first before running the following command:
+    
     wget http://devbioinfoguy.github.io/wrangling-genomics-HPC/data/variant_calling.tar.gz
 
-The file 'variant_calling.tar.gz' is what is commonly called a "tarball", which is
+The file 'variant_calling.tar.gz' is what is commonly called a **"tarball"**, which is
 a compressed archive similar to the .zip files we have seen before.  We can decompress
 this archive using the command below.
 
@@ -30,7 +30,6 @@ this archive using the command below.
 
 This will create a directory tree that contains some input data (reference genome and fastq files) and a shell script that details the series of commands used to run the variant calling workflow.
 
-<!--  need to fix the directory structure -->
 	variant_calling
 	├── data
 	│   ├── ref_genome
@@ -44,7 +43,7 @@ This will create a directory tree that contains some input data (reference genom
 	│       └── SRR098283.fastq
 	└── run_variant_calling.sh
 
-Without getting into the details yet, the variant calling workflow will do the following steps
+Without getting into the details yet, the variant calling workflow will do the following steps:
 
 1. Index the reference genome for use by bwa and samtools
 2. Align reads to reference genome using bwa
@@ -59,21 +58,26 @@ Next, we'll create a script for the commands and test it.
 
 Finally, we'll modify the script to run on the cluster.
 
-
 So let's get started.
 
-The first command is to change to our working directory
-so the script can find all the files it expects
+The first command is to change to our working directory:
 
      cd variant_calling
 
-Before we start using software, we have to load the environments for each software
-package. On clusters, this is typically done using a module system. For what we need, 
-you can execute the following commands
+Index the reference genome for use by bwa and samtools:
+    
+	bwa index data/ref_genome/ecoli_rel606.fasta     # This step helps with the speed of alignment
+	
+	samtools faidx data/ref_genome/ecoli_rel606.fasta     # We will need the indexed reference file for variant calling as well. 
+
+Let's load up some of the modules we need for this section:
 
      source new-modules.sh
      module load bwa
      module load samtools
+     module load bcftools
+
+
 
 Create output paths for various intermediate and results files. The `-p` option means mkdir will create the whole path if it does not exist and refrain from complaining if it does exist
 
@@ -91,67 +95,44 @@ on each one in parallel. For now, we're going to work on just one to set up our 
 #### Alignment to genome
 The alignment process consists of choosing an appropriate reference genome to map our reads against, and performing the read alignment using one of several alignment tools such as [NovoAlign](http://www.novocraft.com/main/page.php?s=novoalign) or [BWA](https://github.com/lh3/bwa). 
 
-
-First, we need to index the reference genome for bwa, this is key in speedy alignment of reads 
-
-    bwa index data/ref_genome/ecoli_rel606.fasta
-
-The next step is the alignment, and the usage for bwa is `bwa aln genome.fasta fastq > SAIfile`
+The usage for bwa is `bwa aln genome.fasta fastq > SAIfile`
     
 Have a look at the [bwa options page](http://bio-bwa.sourceforge.net/bwa.shtml). While we are running bwa with the default parameters here, your use case might require a change of parameters. NOTE: Always read the manual page for any tool before using and try to understand the options.
 
     bwa aln data/ref_genome/ecoli_rel606.fasta ../data/trimmed_fastq/ \
     SRR098283.fastq_trim.fastq > results/sai/SRR098283.trimmed.aligned.sai
 
-
-Convert the output to the SAM format. Usage: `bwa samse genome SAIfile fastq > SAMfile`
+Convert the output to the SAM format. Usage: `bwa samse genome.fasta SAIfile fastq > SAMfile`
 
 	bwa samse data/ref_genome/ecoli_rel606.fasta results/sai/ \
 	SRR098283.trimmed.aligned.sai ../data/trimmed_fastq/SRR098283.fastq_trim.fastq > \
 	results/sam/SRR098283.trimmed.aligned.sam
 
-Explore the ["SAM" format](http://samtools.sourceforge.net/). What key information is contained? What is in the header? 
+We already know about the information within a [SAM file](https://github.com/adamfreedman/knowyourdata-genomics/blob/gh-pages/lessons/01-know_your_data.md#aligned-reads-sam). Let's take a quick look at the one we just created:
 
 	head results/sam/SRR098283.trimmed.aligned.sam
 	
-	@SQ	SN:NC_012967.1	LN:4629812
-	@PG	ID:bwa	PN:bwa	VN:0.7.9a-r786	CL:bwa samse data/ref_genome/ecoli_rel606.fasta 	results/sai/SRR098283.trimmed.aligned.sai ../data/trimmed_fastq/	SRR098283.fastq_trim.fastq
-	SRR098283.290	4	*	0	0	*	*	0	0	TCATTTTTTGNGCGCGCGGCGGANATTGACGNA	CC?ABBBBB:!=?7?:7;><?<A!@A@+;=<!:
-	SRR098283.297	16	NC_012967.1	3089646	25	35M	*	0	0	CGTNAAAAAAANCGGCGTTCTCGATCAAGTTCTGG	<;B!A@BAB?;!@B@39A?AA;B?A@@@A@B?BBBXT:A:U	NM:i:2	X0:i:1	X1:i:0	XM:i:2	XO:i:0	XG:i:0	MD:Z:3G7C23
-	SRR098283.299	16	NC_012967.1	793036	37	23M	*	0	0	AAAATGTGCGGGAATGGTCCGGT	8266?9'?;==?>8>>A?9;@@A	XT:A:U	NM:i:0	X0:i:1	X1:i:0	XM:i:0	XO:i:0	XG:i:0	MD:Z:23
-	SRR098283.300	16	NC_012967.1	315994	37	23M	*	0	0	TCCTTTGTTGTGTGCAGGGATCA	C*5CBBCBBCB@BB@BBBBBB<@	XT:A:U	NM:i:0	X0:i:1	X1:i:0	XM:i:0	XO:i:0	XG:i:0	MD:Z:23
-	SRR098283.302	0	NC_012967.1	1784850	25	35M	*	0	0	AGAAGAAATTAGAGAACTGGTTTNGGGGCTTNCCC	BB?C=BCCA?C7>A?A@A9;:?B!??938AB!B=@XT:A:U	NM:i:2	X0:i:1	X1:i:0	XM:i:2	XO:i:0	XG:i:0	MD:Z:23C7A3
-	SRR098283.303	16	NC_012967.1	3087882	37	31M	*	0	0	GGCGACANCTTGTTGATACTGGCAGGCGCAT	A:7@;7A!?@CBBCBBC?AB?BABAB=AABB	XT:A:U	NM:i:1	X0:i:1	X1:i:0	XM:i:1	XO:i:0	XG:i:0	MD:Z:7G23
-	SRR098283.306	0	NC_012967.1	3823753	37	25M	*	0	0	GGTCAGGAAACTCACCATCACCGNC	?BABB:+BBABABCBAB?BC?B4!B	XT:A:U	NM:i:1	X0:i:1	X1:i:0	XM:i:1	XO:i:0	XG:i:0	MD:Z:23C1
-	SRR098283.307	0	NC_012967.1	3109908	25	35M	*	0	0	GGTTTACCACCACTGCGGGCAGCNTAAAACANTGC	CCBCCBCCCBCBCBB@@=;=B7@!BA@;@=A!CB:XT:A:U	NM:i:2	X0:i:1	X1:i:0	XM:i:2	XO:i:0	XG:i:0	MD:Z:23A7T3
-
 Convert the SAM file to BAM format: 
-
 
     samtools view -S -b results/sam/SRR098283.trimmed.aligned.sam > \
     results/bam/SRR098283.trimmed.aligned.bam
 
-*BAM is the binary version of SAM and is recommended for use with downstream applications and for storage. More detailed information about these formats can be [found here](https://samtools.github.io/hts-specs/SAMv1.pdf)*
-
 Sort the BAM file:
 
-    samtools sort -O 'bam' -T temp.prefix results/bam/SRR098283.trimmed.aligned.bam > \
+    samtools sort -O bam -T temp.prefix results/bam/SRR098283.trimmed.aligned.bam > \
     results/bam/SRR098283.trimmed.aligned.sorted.bam
 
-*BAM files can be sorted in multiple ways, e.g. by location of alignment on the chromosome, by read name, etc. It is important to be aware that different alignment tools will output differently sorted SAM/BAM, and different downstream tools require differently sorted alignment files as input.*
+*SAM/BAM files can be sorted in multiple ways, e.g. by location of alignment on the chromosome, by read name, etc. It is important to be aware that different alignment tools will output differently sorted SAM/BAM, and different downstream tools require differently sorted alignment files as input.*
 
 #### Assess the alignment (visualization)
 
-Index the BAM and reference fasta file for visualization with IGV:
+Index the BAM file for visualization with IGV:
 
     samtools index results/bam/SRR098283.trimmed.aligned.sorted.bam
-    
-	samtools faidx data/ref_genome/ecoli_rel606.fasta    
-	#We will need the indexed fasta for variant calling as well. 
 
 **Transfer files to your laptop**
 
-Using [FileZilla](https://filezilla-project.org/), transfer the following files to your local machine, 
+Using FileZilla, transfer the following 3 files to your local machine, 
 `results/bam/SRR098283.trimmed.aligned.sorted.bam`,
 
 `results/bam/SRR098283.trimmed.aligned.sorted.bam.bai`, 
@@ -160,7 +141,9 @@ Using [FileZilla](https://filezilla-project.org/), transfer the following files 
 
 **Visualize**
 
-[IGV](https://www.broadinstitute.org/software/igv/download) tutorial
+* Start [IGV](https://www.broadinstitute.org/software/igv/download)
+* Load the genome file into IGV using the **"Load Genomes from File..."** option under the **"Genomes"** pull-down menu.
+* Load the .bam file using the **"Load from File..."** option under the **"File"** pull-down menu. *IGV requires the .bai file to be in the same location as the .bam file that is loaded into IGV, but there is no direct use for that file.*
 
 #### Call variants
 
@@ -169,9 +152,9 @@ Do the first pass on variant calling by counting read coverage with samtools [mp
     samtools mpileup -g -f data/ref_genome/ecoli_rel606.fasta \
       results/bam/SRR097977_aligned_sorted.bam > results/bcf/SRR097977_raw.bcf
 
-*We have only generated a file with coverage and nucleotide information for every base, to actually identify variants, we have to use a different tool from the samtools suite called [bcftools](https://samtools.github.io/bcftools/bcftools.html).*
+***We have only generated a file with coverage information for every base with the above command; to actually identify variants, we have to use a different tool from the samtools suite called [bcftools](https://samtools.github.io/bcftools/bcftools.html).***
 
-Do the SNP calling with bcftools, and:
+Do the SNP calling with bcftools:
 
     bcftools call -vc -O b results/bcf/SRR097977_raw.bcf > results/bcf/SRR097977_variants.bcf
 
@@ -182,7 +165,7 @@ Filter the SNPs for the final output in VCF format, using vcfutils.pl:
 	
 *`bcftools view` converts the binary format of bcf files into human readable format (tab-delimited) for `vcfutils.pl` to perform the filtering. Note that the output is in VCF format, which is a text format.*
 
-Explore the VCF format:
+Explore the VCF format, that we have already learned a little bit about [earlier](https://github.com/adamfreedman/knowyourdata-genomics/blob/gh-pages/lessons/01-know_your_data.md#called-genotypes-vcf):
 
 	less results/vcf/SRR097977_final_variants.vcf
 
@@ -225,14 +208,14 @@ QUAL then is the Phred scaled probablity that the observed variant exists at thi
 The FILTER field is a `.`, i.e. no filter has been applied, otherwise it will be set to either PASS or show the (quality) filters this variant failed. 
 
 The last columns contains the genotypes and can be a bit more tricky to decode. In brief, we have:
-* GT: The genotype of this sample which for a diploid genome is encoded with a 0 for the REF allele, 1 for the first ALT allele, 2 for the second and so on. So 0/0 means homozygous reference, 0/1 is heterozygous, and 1/1 is homozygous for the alternate allele. For a diploid organism, the GT field indicates the two alleles carried by the sample, encoded by a 0 for the REF allele, 1 for the first ALT allele, 2 for the second ALT allele, etc. When there's a single ALT allele (by far the more common case), GT will be either:
+* GT: The genotype of this sample which for a diploid genome is encoded with a 0 for the REF allele, 1 for the first ALT allele, 2 for the second and so on. So 0/0 means homozygous reference, 0/1 is heterozygous, and 1/1 is homozygous for the alternate allele. For a diploid organism, the GT field indicates the two alleles carried by the sample, encoded by a 0 for the REF allele, 1 for the first ALT allele, 2 for the second ALT allele, etc.
 * GQ: the Phred-scaled confidence for the genotype
 * AD, DP: Reflect the depth per allele by sample and coverage
 * PL: the likelihoods of the given genotypes
 
 The BROAD's [VCF guide](https://www.broadinstitute.org/gatk/guide/article?id=1268) is an excellent place to learn more about VCF file format.
 
-#### Calling Variants from all files?
+#### Exercise I - Calling Variants from all files?
 
 That's a lot of work, yes? But you have five more FASTQ files to go...
 
@@ -243,13 +226,12 @@ you do to help yourself out in this regard?
 - If you were to automate this process, what additional bits of information might you need?
 
 
-## Automating this Workflow with a Bash Script
+#### Exercise II - Automating this Workflow with a Bash Script
 
 The easiest way for you to be able to repeat this process is to capture the steps that
 you've performed in a bash script. And you've already learned how to do this in previous
 lessons. So...
 
-#### Exercises:
 - Using your command history, create a script file that will repeat these commands
 for you. Name your script *run_variant_call_on_file.sh*. Delete your results 
 directories, and run your script. Do you get all the proper output files?
@@ -272,7 +254,7 @@ workflow more friendly to different sets of input files?
 or within scripts that we could optimize?
 
 
-## Granting our Workflow More Flexibility
+#### Exercise III - Granting our Workflow More Flexibility
 
 A couple of changes need to be made to make this script more friendly to both changes
 in the workflow and changes in files. 
@@ -369,14 +351,16 @@ analytical workflow>
     # And finally, filter the SNPs for the final output
     bcftools view $variants | vcfutils.pl varFilter - > $final_variants
 
-This script is now ready for submission:
+This new script is now ready for running:
 	
 	sh run_variant_call_on_file.sh <name of fastq>
 
-## Parallelizing workflow for efficiency
+#### Exercise IV - Parallelizing workflow for efficiency
 
 To run the same script on a worker node on the cluster via the job scheduler, we need to add our **SLURM directives** at the **beginning** of the script. This is so that the scheduler knows what resources we need in order to run our job on the
 compute node(s). 
+
+Copy the `run_variant_call_on_file.sh` file and give it a new name `run_variant_call_on_file.sbatch`. Add the SLURM directives to the beginning of the file.
 
 So the top of the file should look like:
 
@@ -387,23 +371,19 @@ So the top of the file should look like:
     #SBATCH -N 1                # Ensure that all cores are on one machine
     #SBATCH -t 0-1:00           # Runtime in D-HH:MM (or use minutes)
     #SBATCH --mem 100           # Memory in MB
-    #SBATCH -J frog_fastqc      # Job name
-    #SBATCH -o fastqc.out       # File to which standard out will be written
-    #SBATCH -e fastqc.err       # File to which standard err will be written
+    #SBATCH -J var_call_ecoli      # Job name
+    #SBATCH -o var_call_ecoli.out       # File to which standard out will be written
+    #SBATCH -e var_call_ecoli.err       # File to which standard err will be written
     #SBATCH --mail-type=ALL     # Type of email notification: BEGIN,END,FAIL,ALL
-    #SBATCH --mail-user=rmf@123.com # Email to which notifications will be sent 
+    #SBATCH --mail-user=<your-email@here.com> # Email to which notifications will be sent 
 
-    #rest of the script we already made
-
-What we'd like to do is run this script on a compute node for every FASTQ -- pleasantly parallelizing our workflow. And now is where we'll use the for loop with the power of the cluster. 
+What we'd like to do is run this script on a compute node for every trimmed FASTQ -- pleasantly parallelizing our workflow. And now is where we'll use the for loop with the power of the cluster: 
 
     for fq in data/trimmed_fastq/*.fastq
     do
       sbatch run_variant_call_on_file.sh $fq
       sleep 1
     done
-
-***Make sure you run the For loop-containing submission script from the login node***
 
 What you should see on the output of your screen would be the jobIDs that are returned
 from the scheduler for each of the jobs that you submitted.
@@ -414,7 +394,5 @@ about 60 seconds between what is happening and what is reported).
 Don't forget about the scancel command, should something go wrong and you need to
 cancel your jobs.
 
-
-#### Exercises:
-- Change the script so that one can include an additional variable to point to
+* Change the script so that one can include an additional variable to point to
  a results directory.

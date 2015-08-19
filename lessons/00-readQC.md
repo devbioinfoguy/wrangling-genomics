@@ -46,7 +46,7 @@ The trimmed data we will be working with is in a the directory we copied over ye
 
 ###B. Run FastQC  
 
-Before we run FastQC, let's start an interactive session on the cluster
+Before we run FastQC, let's start an interactive session on the cluster:
 
 	srun -p interact --pty --mem 500 -t 0-06:00 /bin/bash
 
@@ -56,7 +56,10 @@ Once your interactive job starts, notice that the command prompt no longer says 
 
     cd ~/dc_workshop/data/untrimmed_fastq/  
 
-To run the FastQC program, we first need to load the appropriate module.
+Before we start using software, we have to load the environments for each software
+package. On clusters, this is typically done using a **module** system. 
+
+To run the FastQC program, we first need to load the appropriate module:
 
 	source new-modules.sh
 	module load fastqc
