@@ -72,7 +72,7 @@ FastQC will accept multiple file names as input, so we can use the *.fastq wildc
 
 *Did you notice how each file was processed serially? How do we speed this up?*
 
-Exit the interactive session and start a new one with 3 cores, and use the multi-threading funcionality of FastQC to run 6 jobs at once.
+Exit the interactive session and start a new one with 6 cores, and use the multi-threading funcionality of FastQC to run 6 jobs at once.
 
 	exit      #exit the current interactive session
 	
