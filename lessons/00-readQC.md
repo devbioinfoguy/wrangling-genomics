@@ -87,7 +87,7 @@ Now, let's create a home for our results
 
     mkdir ~/dc_workshop/results/fastqc_untrimmed_reads
 
-...and move them there (recall, we are still in '~/dc_workshop/data/untrimmed_fastq/')
+...and move them there (recall, we are still in `~/dc_workshop/data/untrimmed_fastq/`)
 
     mv *.zip ~/dc_workshop/results/fastqc_untrimmed_reads/
     mv *.html ~/dc_workshop/results/fastqc_untrimmed_reads/
