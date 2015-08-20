@@ -170,7 +170,7 @@ Using FileZilla, transfer the following 3 files to your local machine,
 Do the first pass on variant calling by counting read coverage with samtools [mpileup](http://samtools.sourceforge.net/mpileup.shtml):
 
     samtools mpileup -g -f data/ref_genome/ecoli_rel606.fasta \
-      results/bam/SRR098283.aligned.sorted.bam > results/bcf/SRR098283_raw.bcf
+      results/bam/SRR098283.trimmed.aligned.sorted.bam > results/bcf/SRR098283_raw.bcf
 
 ***We have only generated a file with coverage information for every base with the above command; to actually identify variants, we have to use a different tool from the samtools suite called [bcftools](https://samtools.github.io/bcftools/bcftools.html).***
 
