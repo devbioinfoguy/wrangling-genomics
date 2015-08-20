@@ -73,12 +73,6 @@ The first command is to change to our working directory:
 
      cd variant_calling
 
-Index the reference genome for use by bwa and samtools:
-    
-	bwa index data/ref_genome/ecoli_rel606.fasta     # This step helps with the speed of alignment
-	
-	samtools faidx data/ref_genome/ecoli_rel606.fasta     # We will need the indexed reference file for variant calling as well. 
-
 Let's load up some of the modules we need for this section:
 
      source new-modules.sh
@@ -87,19 +81,36 @@ Let's load up some of the modules we need for this section:
      module load bcftools
 
 
+Index the reference genome for use by bwa and samtools:
+    
+	bwa index data/ref_genome/ecoli_rel606.fasta     # This step helps with the speed of alignment
+	
+	samtools faidx data/ref_genome/ecoli_rel606.fasta     # We will need the indexed reference file for variant calling as well. 
+
 
 Create output paths for various intermediate and results files. The `-p` option means mkdir will create the whole path if it does not exist and refrain from complaining if it does exist
-
-     mkdir -p results/sai
-     mkdir -p results/sam
-     mkdir -p results/bam
-     mkdir -p results/bcf
-     mkdir -p results/vcf
+```bash
+mkdir -p results/sai
+mkdir -p results/sam
+mkdir -p results/bam
+mkdir -p results/bcf
+mkdir -p results/vcf
+```
 
 In the script, we will eventually loop over all of our files and have the cluster work
 on each one in parallel. For now, we're going to work on just one to set up our workflow:
 
-     ls -alh ~/dc_workshop/data/trimmed_fastq/SRR098283.fastq_trim.fastq
+```bash
+ls -alh ~/dc_workshop/data/trimmed_fastq/SRR098283.fastq_trim.fastq
+```
+
+**NOTE: if you did not follow the last section, please execute the following command:**
+
+```bash
+mkdir -p ~/dc_workshop/data/trimmed_fastq/
+cp ~/dc_workshop/variant_calling/data/trimmed_fastq/SRR098283.fastq \
+ ~/dc_workshop/data/trimmed_fastq/SRR098283.fastq_trim.fastq
+```
 
 #### Alignment to genome
 The alignment process consists of choosing an appropriate reference genome to map our reads against, and performing the read alignment using one of several alignment tools such as [NovoAlign](http://www.novocraft.com/main/page.php?s=novoalign) or [BWA](https://github.com/lh3/bwa). 
