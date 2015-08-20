@@ -76,7 +76,7 @@ Exit the interactive session and start a new one with 3 cores, and use the multi
 
 	exit      #exit the current interactive session
 	
-	srun -p interact -n 3 --pty --mem 500 -t 0-06:00 /bin/bash      #start a new one with 3 cpus (-n 3)
+	srun -p interact -n 6 --pty --mem 500 -t 0-06:00 /bin/bash      #start a new one with 3 cpus (-n 3)
 	
 	module load fastqc      #you'll have to reload the module for the new session
 	
