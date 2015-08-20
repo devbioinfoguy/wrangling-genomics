@@ -170,17 +170,17 @@ Using FileZilla, transfer the following 3 files to your local machine,
 Do the first pass on variant calling by counting read coverage with samtools [mpileup](http://samtools.sourceforge.net/mpileup.shtml):
 
     samtools mpileup -g -f data/ref_genome/ecoli_rel606.fasta \
-      results/bam/SRR097977_aligned_sorted.bam > results/bcf/SRR097977_raw.bcf
+      results/bam/SRR098283_aligned_sorted.bam > results/bcf/SRR098283_raw.bcf
 
 ***We have only generated a file with coverage information for every base with the above command; to actually identify variants, we have to use a different tool from the samtools suite called [bcftools](https://samtools.github.io/bcftools/bcftools.html).***
 
 Do the SNP calling with bcftools:
 
-    bcftools call -vc -O b results/bcf/SRR097977_raw.bcf > results/bcf/SRR097977_variants.bcf
+    bcftools call -vc -O b results/bcf/SRR098283_raw.bcf > results/bcf/SRR098283_variants.bcf
 
 Filter the SNPs for the final output in VCF format, using vcfutils.pl:
 
-    bcftools view results/bcf/SRR097977_variants.bcf | vcfutils.pl varFilter - > \
+    bcftools view results/bcf/SRR098283_variants.bcf | vcfutils.pl varFilter - > \
     results/vcf/SRR097977_final_variants.vcf
 	
 *`bcftools view` converts the binary format of bcf files into human readable format (tab-delimited) for `vcfutils.pl` to perform the filtering. Note that the output is in VCF format, which is a text format.*
