@@ -181,13 +181,13 @@ Do the SNP calling with bcftools:
 Filter the SNPs for the final output in VCF format, using vcfutils.pl:
 
     bcftools view results/bcf/SRR098283_variants.bcf | vcfutils.pl varFilter - > \
-    results/vcf/SRR097977_final_variants.vcf
+    results/vcf/SRR098283_final_variants.vcf
 	
 *`bcftools view` converts the binary format of bcf files into human readable format (tab-delimited) for `vcfutils.pl` to perform the filtering. Note that the output is in VCF format, which is a text format.*
 
 Explore the VCF format, that we have already learned a little bit about [earlier](https://github.com/adamfreedman/knowyourdata-genomics/blob/gh-pages/lessons/01-know_your_data.md#called-genotypes-vcf):
 
-	less results/vcf/SRR097977_final_variants.vcf
+	less results/vcf/SRR098283_final_variants.vcf
 
 You will see the header which describes the format, when the file was created, the tools version along with the command line parameters used and some additional column information:
 
@@ -203,9 +203,9 @@ You will see the header which describes the format, when the file was created, t
 	.
 	.
 	##bcftools_callVersion=1.2+htslib-1.2.1
-	##bcftools_callCommand=call -cv -O b results/bcf/SRR097977_raw.bcf
+	##bcftools_callCommand=call -cv -O b results/bcf/SRR098283_raw.bcf
 	##bcftools_viewVersion=1.2+htslib-1.2.1
-	##bcftools_viewCommand=view results/bcf/SRR097977_variants.bcf
+	##bcftools_viewCommand=view results/bcf/SRR098283_variants.bcf
 
 Followed by the variant information:
 
