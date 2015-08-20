@@ -16,7 +16,14 @@ Learning Objectives:
 #### Setting up
 
 To get started with this lesson, ensure you are logged into the cluster and are working
-in an interactive session on a compute node (single core). 
+in an interactive session on a compute node (single core):
+
+```bash
+ssh rcusername@login.rc.fas.harvard.edu
+(enter password)
+(enter 2FA 6-digit code, no spaces)
+srun --pty -p interact --mem 500 -n 1 -N 1 -t 0-06:00 /bin/bash
+```
 
 *Next, and **you may have already done this yesterday**, we will need to grab some data from an outside server using `wget` on the command line.*
 
@@ -205,14 +212,22 @@ ID is a `.` until we add annotation information.
 
 REF and ALT represent the genotype at the reference and in the sample, always on the foward strand. 
 
+
+
 QUAL then is the Phred scaled probablity that the observed variant exists at this site. Ideally you would need nothing else to filter out bad variant calls, but in reality we still need to filter on multiple other metrics. 
 
 The FILTER field is a `.`, i.e. no filter has been applied, otherwise it will be set to either PASS or show the (quality) filters this variant failed. 
 
+
+
 The last columns contains the genotypes and can be a bit more tricky to decode. In brief, we have:
+
 * GT: The genotype of this sample which for a diploid genome is encoded with a 0 for the REF allele, 1 for the first ALT allele, 2 for the second and so on. So 0/0 means homozygous reference, 0/1 is heterozygous, and 1/1 is homozygous for the alternate allele. For a diploid organism, the GT field indicates the two alleles carried by the sample, encoded by a 0 for the REF allele, 1 for the first ALT allele, 2 for the second ALT allele, etc.
+
 * GQ: the Phred-scaled confidence for the genotype
+
 * AD, DP: Reflect the depth per allele by sample and coverage
+
 * PL: the likelihoods of the given genotypes
 
 The BROAD's [VCF guide](https://www.broadinstitute.org/gatk/guide/article?id=1268) is an excellent place to learn more about VCF file format.

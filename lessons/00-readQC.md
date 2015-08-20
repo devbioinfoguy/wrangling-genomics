@@ -48,7 +48,7 @@ The trimmed data we will be working with is in a the directory we copied over ye
 
 Before we run FastQC, let's start an interactive session on the cluster:
 
-	srun -p interact --pty --mem 500 -t 0-06:00 /bin/bash
+	srun --pty -p interact --mem 500 -n 1 -N 1 -t 0-06:00 /bin/bash
 
 ***An interactive session is a very useful to test tools, workflows, run jobs that open new interactive windows (X11-forwarding) and so on.***
 
@@ -76,7 +76,7 @@ Exit the interactive session and start a new one with 6 cores, and use the multi
 
 	exit      #exit the current interactive session
 	
-	srun -p interact -n 6 --pty --mem 500 -t 0-06:00 /bin/bash      #start a new one with 3 cpus (-n 3)
+	srun --pty -p interact -n 6 -N 1 --mem 500 -t 0-06:00 /bin/bash      #start a new one with 3 cpus (-n 3)
 	
 	module load fastqc      #you'll have to reload the module for the new session
 	
